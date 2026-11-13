@@ -217,13 +217,15 @@ app.UseExceptionHandler(exceptionApp =>
 
 app.UseSerilogRequestLogging();
 
-// Swagger disponivel para inspecao e homologacao da API
+// Swagger disponivel para inspecao e homologacao da API (/swagger e /)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Bairro Vivo API v1");
-    c.RoutePrefix = string.Empty;
+    c.RoutePrefix = "swagger";
 });
+
+app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
 
 app.UseRateLimiter();
 app.UseAuthentication();
