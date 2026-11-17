@@ -1,10 +1,10 @@
 # BAIRRO VIVO | Especificação do frontend (React Native)
 
-**Versão:** 1.1 — 10/11/2026  
+**Versão:** 1.2 — 17/11/2026  
 **Público:** Desenvolvedor(a) Mobile/Frontend e designer.  
-**Objetivo:** Construir telas, navegação, estados, modelos de dados e integração com Java/.NET de maneira consistente **antes de existirem endpoints definitivos**. O SQL Oracle v1 preliminar ainda não reflete integralmente a nova divisão da IA.
+**Objetivo:** Construir telas, navegação, estados, modelos e integração com Java/.NET a partir da arquitetura consolidada. O Oracle v1.2 está validado; as rotas Java e .NET ainda são propostas até a publicação do OpenAPI.
 
-> Fonte de requisitos acadêmicos: “2TDS Fevereiro - Global Solution 2026-2.pdf”, seção Mobile Application Development. Exige React Native, pelo menos seis telas com navegação, CRUD usando API real, login/cadastro/logout, identidade visual, vídeo, Firebase App Distribution e tela “Sobre o App” com hash do commit.
+> Fonte de requisitos acadêmicos: enunciado original `Requisitos/Global_Solution_2026_2_Enunciado_Original.pdf`, seção Mobile Application Development (turma correta: 2TDSPO, segundo semestre). Exige React Native, pelo menos seis telas com navegação, CRUD usando API real, login/cadastro/logout, identidade visual, vídeo, Firebase App Distribution e tela “Sobre o App” com hash do commit.
 
 ## 1. O produto em uma frase
 
@@ -93,10 +93,10 @@ Um aplicativo com navegação por abas pode usar `Mapa`, `Explorar`, `Minhas` e 
 
 1. Usuário autenticado toca em **Registrar ocorrência**.
 2. Informa categoria, título e descrição livremente. Nesta versão não existe ferramenta de melhoria textual por IA.
-3. Define a localização por GPS ou move o pino manualmente; o GPS é opcional, mas **as coordenadas da ocorrência são obrigatórias**.
-4. Pode anexar fotos, com prévia e remoção antes de enviar. Fotos são **opcionais**.
+3. Define a localização por GPS ou move o pino manualmente. GPS é opcional, mas **latitude, longitude e um município válido do cadastro Oracle são obrigatórios**. O app precisa permitir escolher município ou validar a cidade resolvida por serviço de geocodificação.
+4. Pode anexar fotos, com prévia e remoção antes de enviar. Fotos são **opcionais**. Fotos da ocorrência pertencem ao autor original; fotos de terceiros são adicionadas por atualização.
 5. Marca ou desmarca **Publicar anonimamente** (opcional).
-6. Envia para .NET; mostrar loading e evitar envio duplicado; a API garante idempotência.
+6. Envia para .NET com uma chave idempotente estável (`Idempotency-Key`); mostrar loading e evitar envio duplicado. O backend deverá implementar e demonstrar essa proteção.
 7. Ao sucesso, abre detalhes com status `ABERTA` e a ocorrência aparece em `Minhas ocorrências`, mesmo se anônima.
 
 **Edição e exclusão:** apenas autoria reconhecida pela API. Proposta de regra de produto: editar campos originais até a primeira interação de terceiros; após isso, publicar uma nova atualização para manter a integridade do histórico. Retirar/excluir via exclusão lógica, nunca simplesmente apagar votos e histórico. Não assumir que um botão disponível significa autorização: backend é o árbitro.
@@ -169,7 +169,7 @@ export interface OcorrenciaDetalhe extends OcorrenciaResumo {
   autorExibicao: string; // "Cidadão anônimo" ou nome permitido
   anonimoPublico: boolean;
   enderecoReferencia?: string | null;
-  municipio?: { codigoIbge?: string; nome: string; uf: string };
+  municipio: { id: string; codigoIbge?: string; nome: string; uf: string };
   fotos: { id: string; url: string; textoAlternativo?: string }[];
   contagemParaMudarStatus: { atual: number; necessario: 2; alvo: StatusOcorrencia };
   souAutor?: boolean; // somente em resposta privada/autenticada
@@ -220,7 +220,7 @@ export interface OrientacaoCidada {
 }
 ```
 
-**Decisões pendentes até fechar o contrato atualizado e adaptar o Oracle v1:** formato exato dos IDs (UUID/NUMBER), paginação e ordenação, formato dos uploads (multipart ou upload assinado), política de exclusão, relação entre atualizações e votos, apresentação de múltiplos papéis. Não fixar esses detalhes como se já estivessem implementados.
+**Modelo físico confirmado:** identificadores Oracle usam `NUMBER(19)` e são representados nos contratos JSON como strings decimais para preservar precisão no JavaScript. `TB_OCORRENCIA.ID_MUNICIPIO` não aceita nulo; anonimato é `S/N` no banco, boolean no app. **Ainda pendentes de contrato:** paginação/ordenação, fluxo de uploads, edição/exclusão e URLs efetivas. Não presumir que endpoints propostos já estejam implementados.
 
 ## 7. Requisitos de mapa e GPS
 
@@ -303,6 +303,15 @@ Dois clientes HTTP com URLs de base distintas. Interceptador de autenticação s
 - [ ] CRUD está integrado à API real, com erros visuais; seis ou mais telas navegáveis.
 - [ ] Tela Sobre mostra hash do commit; build correta no Firebase App Distribution.
 
-## 12. Integração e bloqueios que precisam ser combinados
+## 12. Regras adicionais da integração Oracle v1.2
+
+- O próprio usuário pode ver suas publicações anônimas em `Minhas ocorrências`, porque o vínculo de autoria permanece no Oracle. As respostas públicas não devem incluir `ID_USUARIO`.
+- A .NET deve usar `PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO` e não aceitar alteração manual de `STATUS` ou `NUM_CICLO`; após cada publicação, o frontend busca o status atualizado da API.
+- O `.NET` executa a validação do JWT emitido pelo Java; `sub` é uma string decimal com ID numérico Oracle. Papel `ADMIN` consulta relatórios, sem permissão de publicar ou votar.
+- `ID_MUNICIPIO` existe como referência obrigatória, embora não exista bairro obrigatório; se município não foi reconhecido, solicitar escolha/validação no formulário.
+- Anexos de terceiros **não** podem ser colocados como foto direta da ocorrência; devem pertencer a uma atualização do usuário autenticado.
+- A consulta de orientação usa a API Java, que faz a busca HTTP do contexto da ocorrência na API .NET. Nenhuma IA deve ser chamada por .NET.
+
+## 13. Integração e bloqueios que precisam ser combinados
 
 Antes de ligar definitivamente os serviços, alinhar com o time: nomes dos campos e tipos de ID, issuer/audience/JWT, formato uniforme de erros, paginação, upload, política de edição/exclusão, formato do relatório e contrato de orientação da IA Java, incluindo consulta de ocorrência na API .NET. A equipe do frontend pode começar a desenvolver com os contratos conceituais aqui descritos, mas não deve presumir URLs reais antes de o backend publicar o OpenAPI.

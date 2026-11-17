@@ -1,10 +1,10 @@
 # BAIRRO VIVO | Especificação técnica para Java / Spring Boot
 
-**Versão:** 1.1 — 10/11/2026  
+**Versão:** 1.2 — 17/11/2026  
 **Público:** Desenvolvedor(a) responsável pela disciplina Java Advanced.  
 **Objetivo:** Implementar identidade, JWT e a funcionalidade central de IA (orientação cidadã com Spring AI e RAG), interoperando com a API .NET e o Oracle.
 
-> O script Oracle v1 foi criado antes desta revisão e **precisa ser adaptado**. Esta especificação define o comportamento desejado, não confirma o DDL existente. Tipos físicos e contratos serão reconciliados com o time de banco antes de implementar JPA e scripts finais.
+> O Oracle v1.2 já foi executado e validado pela equipe. As tabelas e tipos físicos são os do `Banco/BairroVivo_SQL_Oracle_v1_2.sql`; interfaces REST, JWT e integração Java/.NET continuam sujeitas à implementação. Usar o dicionário atualizado como referência para JPA.
 
 ## 1. Responsabilidade oficial do Java
 
@@ -24,7 +24,7 @@
 
 ## 2. Requisitos obrigatórios da disciplina Java Advanced
 
-Conforme o enunciado “2TDS Fevereiro - Global Solution 2026-2.pdf”:
+Conforme o enunciado original da GS 2026/2 (arquivo em `Requisitos/`; a turma correta é 2TDSPO, segundo semestre):
 
 - Spring Boot com API REST de **no mínimo três entidades relacionadas**, CRUD, Spring Data JPA e **paginação**.
 - Bean Validation nos DTOs e tratamento global com `@RestControllerAdvice`, com respostas padronizadas.
@@ -38,24 +38,24 @@ Conforme o enunciado “2TDS Fevereiro - Global Solution 2026-2.pdf”:
 
 ## 3. Domínio Java: três entidades relacionadas
 
-**Nomes conceituais**, sem tipos Oracle definitivos:
+**Entidades relacionadas que já existem no Oracle v1.2** (nomes de classes Java são sugestões):
 
 | Entidade JPA | Relacionamentos | Campos conceituais | Operações |
 |---|---|---|---|
-| `Usuario` / futura `TB_USUARIO` | 1:1 com Preferencia; 1:N com LocalFavorito | ID, nome, email, senhaHash, ativo, papel(is), criadoEm, atualizadoEm | Criar, ler própria conta, atualizar, desativar |
-| `PreferenciaUsuario` / futura `TB_PREFERENCIA_USUARIO` | 1:1 com Usuario | ID, usuarioId, tema, preferenciasDeAcessibilidade, atualizadoEm | Criar padrão, ler, atualizar, restaurar padrão |
-| `LocalFavorito` / futura `TB_LOCAL_FAVORITO` | N:1 com Usuario | ID, usuarioId, apelido, latitude, longitude, criadoEm | Criar, listar paginado, ler, editar, excluir |
+| `Usuario` / `TB_USUARIO` | 1:1 com Preferencia; 1:N com LocalFavorito | ID, nome, email, senhaHash, ativo, papel(is), criadoEm, atualizadoEm | Criar, ler própria conta, atualizar, desativar |
+| `PreferenciaUsuario` / `TB_PREFERENCIA_USUARIO` | 1:1 com Usuario | ID, usuarioId, tema, preferenciasDeAcessibilidade, atualizadoEm | Criar padrão, ler, atualizar, restaurar padrão |
+| `LocalFavorito` / `TB_LOCAL_FAVORITO` | N:1 com Usuario | ID, usuarioId, apelido, latitude, longitude, criadoEm | Criar, listar paginado, ler, editar, excluir |
 
-A relação entre Usuario e Preferencia é **1:1**. O local favorito é privado e não restringe o cadastro de ocorrência. Não é necessário pedir bairro de residência.
+A relação entre Usuario e Preferencia é **1:1** (`UX_PREF_USUARIO` no Oracle). O local favorito é privado e não restringe o cadastro de ocorrência. Não é necessário pedir bairro de residência.
 
-**Entidades adicionais para IA sob responsabilidade Java:** `Municipio`, `OrgaoPublico`, `ServicoPublico`, `CanalAtendimento`, `FonteOficial` e `OrientacaoIA` (e referência de orientação para suas fontes). São conceituais até a revisão do script Oracle; usar os dados de fontes oficiais e orientações sem disputar a responsabilidade do .NET por ocorrências.
+**Entidades adicionais para IA sob responsabilidade Java:** `Municipio`, `OrgaoPublico`, `ServicoPublico`, `CanalAtendimento`, `FonteOficial` e `OrientacaoIA` (e referência de orientação para suas fontes). As tabelas correspondentes já existem no SQL Oracle v1.2, incluindo `TB_SERVICO_CATEGORIA`, `TB_TRECHO_FONTE` e `TB_ORIENTACAO_FONTE`. Usar o DDL real e não disputar a responsabilidade do .NET pelas ocorrências.
 
-Uma quarta entidade opcional, `EventoAuditoria`/`TB_AUDITORIA_EVENTO`, pode registrar eventos da fila para fins de rastreabilidade, **mas deve ser acordada com o banco**. Se não houver tabela de auditoria, o consumidor pode registrar o evento em logging estruturado na demonstração acadêmica.
+Uma quarta entidade `EventoAuditoria` ou tabela `TB_AUDITORIA_EVENTO` **não existe no SQL v1.2**; qualquer inclusão exige aprovação explícita do time de banco. Se não houver tabela de auditoria, o consumidor pode registrar o evento em logging estruturado na demonstração acadêmica.
 
 ### Identidade e chaves
 
 - `Usuario.id` deve ser persistente e estável.
-- O claim JWT `sub` deve conter uma representação inequívoca desse ID (string). **Escolher UUID ou chave numérica em conjunto com o time Oracle e .NET antes de programar as entidades**.
+- O claim JWT `sub` deve conter uma representação inequívoca desse ID (string). **O Oracle já decidiu chave numérica `NUMBER(19)`; usar `Long` no Java e representação decimal string no JWT/JSON.**
 - O .NET utiliza `sub` para relacionar ocorrências, atualizações e votos ao autor autenticado. **Nunca confiar em um `idUsuario` enviado pelo corpo da requisição**.
 - A API .NET não deve receber nem consultar o hash da senha. Se Java e .NET compartilharem o mesmo Oracle, separar permissões de banco por responsabilidade.
 - No caso de anonimato público, o identificador real continua vinculado ao registro internamente, mas as respostas públicas não expõem sua identidade.
@@ -270,7 +270,7 @@ Caso o grupo prefira distribuir a chave pública via configuração segura, o en
 - DTOs independentes das entidades. **Nunca retornar `senhaHash`**.
 - `@RestControllerAdvice` para `MethodArgumentNotValidException`, autenticação, conflito, recurso ausente e falha do modelo, da recuperação de fontes ou da API .NET.
 - JPA: projetar índices para email e usuário nos locais favoritos; tratamento de n+1 queries e paginação em consultas.
-- O Oracle v1 existente e preliminar e precisa ser reconciliado com está divisao de IA; revisar chaves, índices, tabelas de conhecimento e orientação antes do mapeamento JPA.
+- O Oracle v1.2 já está validado: usar os nomes, tipos, índices e relacionamentos existentes no SQL e no dicionário físico para o mapeamento JPA.
 
 ## 8. Mensageria distribuída — proposta RabbitMQ
 
@@ -363,18 +363,27 @@ Separar `.env` / secrets de dev e produção: conexão Oracle, chave privada JWT
 - [ ] Swagger/OpenAPI e README com configuração, execução, exemplos, usuário de teste e declaração de uso de IA.
 - [ ] Testes automatizados e demonstração ponta a ponta no aplicativo.
 
-## 12. Pendências para alinhamento com a próxima etapa (banco de dados)
+## 12. Pendências de integração (com banco já definido)
 
-**Não gerar novo SQL nesta etapa.** Já existe um SQL Oracle v1 preliminar, anterior a esta decisão. Antes de alinhar JPA e atualizar o SQL, confirmar:
+A estrutura física v1.2 já está validada e **não precisa ser reescrita** para iniciar Java. Antes da integração, a equipe deve decidir:
 
-1. Tipo da chave de usuário e representação no `sub` (NUMBER/UUID).
-2. Nomes e tipos físicos definitivos das tabelas/colunas Oracle.
-3. Representação do papel em campo único no MVP e eventual expansão futura para múltiplos papéis.
-4. Regras de exclusão/desativação de usuário, privacidade e histórico.
-5. Critério de criação de PreferenciaUsuario (síncrono ou por evento).
-6. Algoritmo/chaves JWT, issuer, audience, claim `roles`, expiração e estratégia de renovação.
-7. Limites de requisições, timeout e custo da orientação com Spring AI, formatação das fontes e município piloto.
-8. Endpoint de leitura de ocorrência .NET consumido por Java e contrato de resposta Java para o frontend, ambos em OpenAPI.
-9. Tabelas/relacoes de conhecimento oficial, versões de fonte e registro de orientação no Oracle, de propriedade Java.
+1. Política de desativação/exclusão de usuário com ocorrências e votos relacionados.
+2. Quando criar `TB_PREFERENCIA_USUARIO`: transação de cadastro ou consumidor assíncrono idempotente.
+3. Contrato JWT: chave pública/RS256, `issuer`, `audience`, `roles`, `sub` numérico em string e tempo de expiração.
+4. Políticas de custo e timeout do Spring AI, fontes oficiais e forma de apresentação ao usuário.
+5. Endpoint `.NET` de leitura da ocorrência para contexto de IA e seu OpenAPI, além dos DTOs de resposta da orientação.
+6. Configuração segura do Oracle e do broker de mensageria, sem segredos em código.
 
-**Regra de governança entre equipes:** alterações nesses contratos precisam ser combinadas com frontend, .NET e banco, pois todos dependerão da mesma identidade de usuário.
+**Referências:** `Banco/BairroVivo_SQL_Oracle_v1_2.sql`, `Dicionario_Dados_Integracao.md` e `05_Contratos_Integracao_Java_DotNet.md`.
+
+
+## 13. Integração confirmada com o SQL Oracle v1.2
+
+- `TB_USUARIO.ID_USUARIO NUMBER(19)` é identity; `PAPEL VARCHAR2(12)` aceita somente `CIDADAO`/`ADMIN`; `FL_ATIVO` é `S/N`. A coluna `SENHA_HASH VARCHAR2(255)` é exclusiva do Java.
+- `TB_PREFERENCIA_USUARIO` possui vínculo 1:1 com usuário e `TEMA` limitado a `CLARO`, `ESCURO`, `SISTEMA`, `ALTO_CONTRASTE` limitado a `S/N`.
+- `TB_LOCAL_FAVORITO` tem `LATITUDE NUMBER(10,7)` e `LONGITUDE NUMBER(10,7)`.
+- Fontes RAG são lidas da `VW_TRECHOS_RAG_APROVADOS`, com `ID_MUNICIPIO` e `ID_CATEGORIA`.
+- O Java pode usar `PKG_BASE_IA.PR_REGISTRAR_ORIENTACAO` com a assinatura efetiva especificada no DDL; o estado `PARCIAL` é um dos estados aceitos, não uma inferência de fontes.
+- O Java **não chama diretamente procedures de atualização comunitária**. O Java consulta a API .NET para obter título, descrição, categoria e município antes de gerar orientação.
+- O .NET valida tokens emitidos pelo Java e não cria usuários ou IA. Definir issuer/audience, chave pública e papéis com `05_Contratos_Integracao_Java_DotNet.md`.
+- O SQL Oracle v1.2 contém `DROP TABLE` e `DROP PACKAGE` para desenvolvimento; **não executá-lo novamente sobre o schema compartilhado com dados da equipe**.

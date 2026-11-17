@@ -1,8 +1,8 @@
 # BAIRRO VIVO | Escopo funcional consolidado
 
-**Versão:** 1.1 — 10/11/2026  
+**Versão:** 1.2 — 17/11/2026  
 **Projeto:** FIAP Global Solution 2026/2 — CitizenTech  
-**Estado:** Especificação de alinhamento para desenvolvimento. Não é um esquema de banco nem uma API implementada.
+**Estado:** Escopo de produto para desenvolvimento; Oracle v1.2 já validado. Java e .NET ainda devem implementar e publicar os contratos de API.
 
 ## 1. Visão do produto
 
@@ -12,7 +12,7 @@ A comunidade — e não um gestor — informa a evolução dos problemas. Duas c
 
 ### Princípios que já foram decididos
 
-1. Sem tabela ou vínculo obrigatório de bairro. Ocorrências são identificadas por **latitude e longitude**. Município/UF são referências adicionais para orientar a IA e produzir relatórios.
+1. Sem tabela ou vínculo obrigatório de bairro. Ocorrências são identificadas por **latitude e longitude**. Município/UF são usados para orientar a IA e produzir relatórios; o **ID do município é obrigatório na ocorrência** no Oracle v1.2.
 2. **Leitura pública:** mapa, detalhes, fotos, atualizações e histórico visíveis sem login.
 3. **Escrita autenticada:** qualquer contribuição exige conta e JWT emitido pelo Java.
 4. **Anonimato público opcional:** a publicação pode exibir “Cidadão anônimo”; internamente mantém vínculo com a conta. A ocorrência anônima aparece em **Minhas ocorrências** do autor.
@@ -140,15 +140,15 @@ Notificações push; mapa de calor; pesquisa por endereço via geocodificação 
 - A participação anônima publicamente continua vinculada internamente ao usuário autenticado.
 - A regra de duas contas diferentes **não garante duas pessoas físicas distintas**; trata-se de proteção básica contra manipulação.
 
-**Proposta a validar na etapa do banco:** edição do relato original apenas antes da primeira atualização/voto; exclusão lógica para registros com histórico; eventual remoção de conteúdo abusivo exigiria governança adicional, não incluída no escopo do ADMIN relatórios.
+**Política ainda a pactuar entre frontend e .NET:** editar o relato original apenas antes da primeira atualização/voto e usar exclusão lógica quando houver histórico. `FL_EXCLUIDA` já existe no Oracle; a restrição de edição por interações anteriores deve ser aplicada pela API, se adotada. O ADMIN continua sem poderes de moderação.
 
-## 5. Dados conceituais (não são DDL nem tipos definitivos)
+## 5. Estrutura validada no Oracle v1.2
 
-**Identidade Java:** Usuário → Preferências (1:1) e Locais favoritos (1:N). A identidade canônica via JWT deve ter o mesmo formato reconhecido pela API .NET e pelo Oracle.  
-**Domínio .NET:** Categoria → Ocorrência → Atualizações → Mídias; Ocorrência → Votos por ciclo → Histórico de status.  
+**Identidade Java:** `TB_USUARIO` → `TB_PREFERENCIA_USUARIO` (1:1) e `TB_LOCAL_FAVORITO` (1:N). `ID_USUARIO NUMBER(19)` é a identidade canônica: o JWT Java deve expor `sub` como string decimal reconhecida pelo .NET e Oracle.  
+**Domínio .NET:** `TB_CATEGORIA` → `TB_OCORRENCIA` → `TB_ATUALIZACAO`/`TB_MIDIA`; ocorrências usam `TB_VOTO_SITUACAO`, `TB_HISTORICO_STATUS` e `TB_REQUISICAO_IDEMPOTENTE`. `PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO` é a regra canônica de votos, transições e auditoria.  
 **IA/serviços (dominio Java):** Município -> Órgãos -> Serviços -> Canais -> Fontes oficiais; Orientação gerada -> referência para ocorrência .NET e fontes usadas. Os dados de ocorrências permanecem sob responsabilidade .NET; Java pode consumir sua API de leitura, mas não escreve nas tabelas de ocorrências.
 
-O cadastro de ocorrências **não tem `ID_BAIRRO`**, e a pessoa **não precisa informar endereço de residência**. Latitude/longitude são obrigatórias no ponto da ocorrência. Município/UF podem ser obtidos por preenchimento assistido ou serviço de geocodificação quando disponível; para orientar a IA, a identificação do município deve ser confiável.
+O cadastro **não tem `ID_BAIRRO`** e não exige endereço residencial. `LATITUDE` e `LONGITUDE` são obrigatórias. **`TB_OCORRENCIA.ID_MUNICIPIO NUMBER(19) NOT NULL` também é obrigatório no SQL validado:** frontend e backend devem permitir selecionar um município cadastrado ou resolvê-lo com geocodificação verificada; GPS sozinho não preenche o identificador Oracle.
 
 ## 6. Medidas de resultado e limitações
 
@@ -156,6 +156,9 @@ Indicadores: quantidade de problemas publicados, quantidade e percentual de reso
 
 **Limitações transparentes:** confirmação comunitária não equivale à confirmação oficial; telefones/horários públicos podem mudar; a solução não abre protocolos automaticamente; municípios fora da base de fontes verificadas podem receber orientação limitada ou resposta de fonte indisponível.
 
-## 7. Próxima etapa deliberadamente não executada
+## 7. Situação da implementação e entregas em paralelo
 
-Já existe um script preliminar Oracle v1.0, criado antes desta redistribuicao de responsabilidades. Ele precisa ser revisado para alocar as tabelas de orientação e conhecimento oficial ao dominio Java e remover expectativas de IA no .NET. Este documento define a arquitetura desejada, não afirma que o script antigo já esteja atualizado nem validado em Oracle.
+- Oracle v1.2: 19 tabelas e rotinas PL/SQL executadas/validadas no SQL Developer. O script de reset é apenas para desenvolvimento e não deve ser executado em banco compartilhado com dados de APIs.
+- MongoDB: collections e relatórios da disciplina de Banco de Dados já testados; a API .NET utiliza Oracle, **não** MongoDB como persistência principal.
+- APIs Java/.NET e app React Native: responsabilidades definidas neste documento, mas endpoints continuam **propostos** até serem publicados no Swagger/OpenAPI.
+- Para .NET: ver `04_Especificacao_Backend_DotNet.md` e `05_Contratos_Integracao_Java_DotNet.md`. Para o banco: `Dicionario_Dados_Integracao.md` e `Banco/BairroVivo_SQL_Oracle_v1_2.sql`.

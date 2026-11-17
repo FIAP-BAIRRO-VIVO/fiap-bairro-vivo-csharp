@@ -1,38 +1,64 @@
-# Pacote de alinhamento — Bairro Vivo v1.1 (GS 2026/2)
+# Bairro Vivo — Contexto e contratos para backend .NET
 
-**Versão:** 1.1 — 10/11/2026.
+**Global Solution 2026/2 | Turma 2TDSPO (2º semestre)**  
+**Pacote de alinhamento:** versão 1.2, atualizado em 17/11/2026.
+
+## Por onde começar
+
+1. Leia `01_Escopo_Funcional_Bairro_Vivo.md` para entender o produto, os papéis, as funcionalidades e a regra das duas confirmações.
+2. Leia **`04_Especificacao_Backend_DotNet.md`**: é o documento principal para a implementação da API ASP.NET Core Minimal API.
+3. Leia **`05_Contratos_Integracao_Java_DotNet.md`** para compartilhar autenticação JWT e contexto das ocorrências com Java.
+4. Use `Dicionario_Dados_Integracao.md` e **`Banco/BairroVivo_SQL_Oracle_v1_2.sql`** para os nomes/tipos exatos do schema.
+5. Consulte `02_Documentacao_Frontend_React_Native.md` para as telas e os campos que o app espera; `03_Especificacao_Backend_Java_Spring_Boot.md` explica a parte de login, perfis e IA no outro serviço.
+6. O enunciado oficial e a documentação do banco validado estão nas pastas `Requisitos/` e `Referencias/`.
 
 ## Arquivos
 
-1. **01_Escopo_Funcional_Bairro_Vivo.md** — visão do produto, requisitos, permissões, estados, votação e prioridades.
-2. **02_Documentacao_Frontend_React_Native.md** — telas, navegação, mapas/GPS, fotos, integração com duas APIs, autenticação e critérios de aceite.
-3. **03_Especificacao_Backend_Java_Spring_Boot.md** — responsabilidades Java, entidades conceituais, endpoints propostos, JWT compatível com .NET, Spring AI, mensageria e testes.
+```text
+Bairro_Vivo_Backend_DotNet_Atualizado/
+├── README.md
+├── 01_Escopo_Funcional_Bairro_Vivo.md
+├── 02_Documentacao_Frontend_React_Native.md
+├── 03_Especificacao_Backend_Java_Spring_Boot.md
+├── 04_Especificacao_Backend_DotNet.md
+├── 05_Contratos_Integracao_Java_DotNet.md
+├── Dicionario_Dados_Integracao.md
+├── Banco/
+│   └── BairroVivo_SQL_Oracle_v1_2.sql
+├── Requisitos/
+│   └── Global_Solution_2026_2_Enunciado_Original.pdf
+└── Referencias/
+    └── Documentacao_Banco_de_Dados_2TDSPO_A4.pdf
+```
 
-## Situação atual
+## Regras já aprovadas
 
-- Oracle é o banco principal; existe uma primeira versão do SQL, ainda não validada em execução Oracle e pendente de revisão quanto à IA.
-- As rotas e contratos de API são **sugestões de desenvolvimento**, não endpoints existentes.
-- Java controla cadastro, login, JWT, preferências, favoritos e **toda a IA de orientação cidadã com Spring AI/RAG**.
-- .NET controla ocorrências, mapa, fotos, votos comunitários, status e relatórios, **sem IA**.
-- Visitantes **apenas consultam**; contribuições exigem login.
-- Publicações podem aparecer como anônimas publicamente e continuam vinculadas internamente ao autor.
-- Somente dois status: ABERTA e RESOLVIDA, decididos com duas confirmações válidas de contas distintas em cada ciclo.
-- Perfil ADMIN vê relatórios, sem gerenciar ocorrências.
+- **Java:** único responsável por cadastro, login, JWT, identidade/perfil/favoritos e **toda a IA de orientação cidadã (Spring AI/RAG)**.
+- **.NET:** ocorrências, categorias, mapa, fotos, atualizações, votos, histórico, relatórios e validação do JWT Java. **Sem IA em .NET**.
+- **Oracle:** fonte principal, esquema v1.2 validado pelo grupo com 19 tabelas e packages/triggers. **Não usar MongoDB como banco transacional das APIs**; o MongoDB foi parte da entrega acadêmica de dados.
+- **Leitura pública, participação autenticada**; publicação anônima é anonimato de exibição, com autor ainda vinculado no Oracle.
+- **Só existem ABERTA/RESOLVIDA**. O fechamento e a reabertura ocorrem pela procedure Oracle após duas confirmações válidas de usuários distintos por ciclo. Nenhum usuário ou ADMIN altera status manualmente.
+- A ocorrência exige `LATITUDE`, `LONGITUDE` e `ID_MUNICIPIO` válido. **Não existe `TB_BAIRRO`.**
+- **Fotos:** binários no storage externo; Oracle armazena metadados. Foto direta exige o autor original; fotos de terceiros vão em atualizações.
+- **ADMIN:** relatórios e indicadores somente leitura; não modera nem publica.
+- O .NET tem que atender aos requisitos acadêmicos: **Minimal API, Swagger/OpenAPI, JWT, idempotência, rate limiting 429, HealthChecks e testes xUnit**.
 
-**Atenção:** a proposta PDF inicial era anterior a estas definições e contém conceitos revogados (bairros, gestor de status e IA de triagem). Para desenvolvimento, prevalecem estes três documentos.
+## Estado do projeto
 
-## Compatibilidade com o SQL preliminar
+**Banco Oracle v1.2:** estrutura e testes PL/SQL executados e validados pelo grupo. O arquivo SQL incluído corresponde à versão padronizada aprovada (mesmo conteúdo da versão final guardada no repositório de Banco de Dados). Os testes do banco **não comprovam** que o backend .NET ou Java já esteja pronto.
 
-Existe um SQL Oracle v1 preliminar, criado com a antiga distribuição da IA. Este pacote **não altera esse SQL**. Antes de adotá-lo, revisar propriedade das tabelas de órgãos/serviços/fontes/orientações (Java), contratos de consulta Java -> .NET e IDs/relacionamentos. Nenhum endpoint ou tipo físico novo foi validado como implementado.
+**Frontend/Java/.NET:** o escopo está alinhado, mas rotas, requests, responses, ambientes e autenticação entre serviços devem ser implementados e publicados no Swagger/OpenAPI. Qualquer rota do pacote é **sugerida**, não uma URL ativa.
 
-## Fontes acadêmicas
+**Fonte de verdade para tipos e constraints:** SQL v1.2. Em caso de divergência entre um exemplo de DTO e o DDL, a equipe deve reconciliar o contrato antes de codificar; não presumir a alteração do banco.
 
-Material fornecido pelo grupo: **2TDS Fevereiro - Global Solution 2026-2.pdf**, em especial as seções Java Advanced, Mobile Application Development, Advanced Business Development with .NET e Mastering Relational and Non-Relational Database.
+## Cuidado importante ao executar o SQL
 
-## O que mudou na versão 1.1
+O script Oracle possui uma seção de `DROP` que apaga as tabelas/objetos e recria a carga. **Executá-lo apenas em schema descartável de desenvolvimento**. Em banco compartilhado da equipe, usar a base já criada; não resetar dados de outras APIs. As APIs devem utilizar conexão segura e variáveis de ambiente para credenciais, nunca hardcode no repositório.
 
-- A **única IA** do aplicativo é **Orientação Cidadã** em Java/Spring AI, com RAG e fontes oficiais.
-- **Removida** a proposta do botão de melhorar descrição da ocorrência.
-- .NET continua responsável por ocorrências, fotos, votos, status e relatórios, sem modelos de IA.
-- Java consulta a ocorrência via API .NET de leitura antes de gerar a orientação; o frontend chama Java para a resposta.
-- Documentos de escopo, frontend e Java foram alinhados. O script Oracle v1 ainda requer revisão posterior.
+## O que foi retirado do pacote anterior
+
+- `script_oracle_bairrovivo.sql` — modelo antigo com tabela de bairros e status descartados.
+- `bairro_vivo_oracle_v1_1.sql` — substituído pelo SQL v1.2 validado.
+- `Proposta_Bairro_Vivo_Global_Solution_2026.pdf` — material de ideação inicial, com divisão de responsabilidades antiga, não adequado para orientar implementação.
+
+O enunciado original mantém o nome de arquivo fornecido pela faculdade, mas neste pacote foi renomeado para facilitar localização. **A turma correta é 2TDSPO, segundo semestre de 2026**, independentemente do rótulo antigo “Fevereiro” no PDF institucional.
