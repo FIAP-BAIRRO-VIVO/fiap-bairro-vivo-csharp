@@ -4,7 +4,7 @@ namespace BairroVivo.API.Domain.Interfaces
 {
     public interface IMunicipioRepository
     {
-        IEnumerable<MunicipioEntity> ObterTodos();
-        MunicipioEntity? ObterPorId(decimal idMunicipio);
+        IEnumerable<MunicipioEntity> ObterTodos(string? nome = null, string? uf = null);
+        MunicipioEntity? ObterPorId(long idMunicipio);
     }
 }

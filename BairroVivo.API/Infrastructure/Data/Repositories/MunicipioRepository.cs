@@ -12,13 +12,26 @@ namespace BairroVivo.Infrastructure.Data.Repositories
             _context = context;
         }
 
-        public IEnumerable<MunicipioEntity> ObterTodos() =>
-            _context.Municipios
-                .Where(m => m.Ativo == "S")
-                .OrderBy(m => m.Nome)
-                .ToList();
+        public IEnumerable<MunicipioEntity> ObterTodos(string? nome = null, string? uf = null)
+        {
+            var consulta = _context.Municipios.AsQueryable();
 
-        public MunicipioEntity? ObterPorId(decimal idMunicipio) =>
+            if (!string.IsNullOrWhiteSpace(nome))
+            {
+                var filtroNome = nome.Trim().ToUpperInvariant();
+                consulta = consulta.Where(m => m.Nome.ToUpper().Contains(filtroNome));
+            }
+
+            if (!string.IsNullOrWhiteSpace(uf))
+            {
+                var filtroUf = uf.Trim().ToUpperInvariant();
+                consulta = consulta.Where(m => m.Uf.ToUpper() == filtroUf);
+            }
+
+            return consulta.OrderBy(m => m.Nome).ToList();
+        }
+
+        public MunicipioEntity? ObterPorId(long idMunicipio) =>
             _context.Municipios.FirstOrDefault(m => m.IdMunicipio == idMunicipio);
     }
 }

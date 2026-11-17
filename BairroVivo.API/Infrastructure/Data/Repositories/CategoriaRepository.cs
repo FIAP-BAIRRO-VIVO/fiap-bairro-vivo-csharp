@@ -14,11 +14,11 @@ namespace BairroVivo.Infrastructure.Data.Repositories
 
         public IEnumerable<CategoriaEntity> ObterTodas() =>
             _context.Categorias
-                .Where(c => c.Ativo == "S")
+                .Where(c => c.FlAtiva == "S")
                 .OrderBy(c => c.Nome)
                 .ToList();
 
-        public CategoriaEntity? ObterPorId(decimal idCategoria) =>
+        public CategoriaEntity? ObterPorId(long idCategoria) =>
             _context.Categorias.FirstOrDefault(c => c.IdCategoria == idCategoria);
 
         public CategoriaEntity Cadastrar(CategoriaEntity categoria)
@@ -36,7 +36,7 @@ namespace BairroVivo.Infrastructure.Data.Repositories
 
         public void Remover(CategoriaEntity categoria)
         {
-            categoria.Ativo = "N";
+            categoria.FlAtiva = "N";
             _context.Categorias.Update(categoria);
             _context.SaveChanges();
         }

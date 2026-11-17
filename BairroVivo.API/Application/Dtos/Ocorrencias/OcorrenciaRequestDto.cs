@@ -1,45 +1,64 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace BairroVivo.Application.Dtos.Ocorrencias
 {
     public class OcorrenciaRequestDto
     {
-        [Range(1, double.MaxValue, ErrorMessage = "A categoria é obrigatória.")]
-        public decimal IdCategoria { get; set; }
+        [JsonPropertyName("categoriaId")]
+        public long CategoriaId { get; set; }
 
-        [Range(1, double.MaxValue, ErrorMessage = "O município é obrigatório.")]
-        public decimal IdMunicipio { get; set; }
+        [JsonPropertyName("idCategoria")]
+        public long IdCategoria
+        {
+            get => CategoriaId;
+            set => CategoriaId = value;
+        }
+
+        [JsonPropertyName("municipioId")]
+        public long MunicipioId { get; set; }
+
+        [JsonPropertyName("idMunicipio")]
+        public long IdMunicipio
+        {
+            get => MunicipioId;
+            set => MunicipioId = value;
+        }
 
         [Required(ErrorMessage = "O título da ocorrência é obrigatório.")]
-        [MaxLength(140)]
+        [MinLength(5, ErrorMessage = "O título deve ter no mínimo 5 caracteres.")]
+        [MaxLength(150, ErrorMessage = "O título deve ter no máximo 150 caracteres.")]
+        [JsonPropertyName("titulo")]
         public string Titulo { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "A descrição da ocorrência é obrigatória.")]
-        [MaxLength(2000)]
+        [MinLength(10, ErrorMessage = "A descrição deve ter no mínimo 10 caracteres.")]
+        [JsonPropertyName("descricao")]
         public string Descricao { get; set; } = string.Empty;
 
-        [MaxLength(15)]
-        public string? Urgencia { get; set; } = "MEDIA";
-
         [Required]
+        [Range(-90, 90, ErrorMessage = "Latitude deve estar entre -90 e 90.")]
+        [JsonPropertyName("latitude")]
         public decimal Latitude { get; set; }
 
         [Required]
+        [Range(-180, 180, ErrorMessage = "Longitude deve estar entre -180 e 180.")]
+        [JsonPropertyName("longitude")]
         public decimal Longitude { get; set; }
 
-        [MaxLength(200)]
-        public string? Logradouro { get; set; }
+        [MaxLength(255)]
+        [JsonPropertyName("enderecoReferencia")]
+        public string? EnderecoReferencia { get; set; }
 
-        [Required(ErrorMessage = "O bairro é obrigatório.")]
-        [MaxLength(100)]
-        public string Bairro { get; set; } = string.Empty;
+        [JsonPropertyName("anonimoPublico")]
+        public bool AnonimoPublico { get; set; } = false;
 
-        [MaxLength(9)]
-        public string? Cep { get; set; }
-
-        [MaxLength(60)]
-        public string? CategoriaSugeridaIa { get; set; }
-
-        public decimal? ConfiancaIa { get; set; }
+        // Propriedades retrocompatíveis caso algum teste envie
+        [JsonPropertyName("bairro")]
+        public string? Bairro
+        {
+            get => EnderecoReferencia;
+            set => EnderecoReferencia ??= value;
+        }
     }
 }

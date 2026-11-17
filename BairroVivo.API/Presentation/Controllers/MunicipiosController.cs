@@ -1,3 +1,4 @@
+using BairroVivo.Application.Dtos.Municipios;
 using BairroVivo.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace BairroVivo.Presentation.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Route("api/v1/municipios")]
     [Route("api/municipios")]
     public class MunicipiosController : ControllerBase
     {
@@ -24,20 +26,22 @@ namespace BairroVivo.Presentation.Controllers
         [AllowAnonymous]
         [SwaggerOperation(
             Summary = "Listar municípios atendidos",
-            Description = "Retorna todos os municípios ativos cadastrados na plataforma Bairro Vivo."
+            Description = "Retorna os municípios cadastrados na base Oracle v1.2, com filtros opcionais por nome e UF."
         )]
-        [SwaggerResponse(StatusCodes.Status200OK, "Municípios retornados com sucesso.")]
-        public IActionResult ObterTodos()
+        [SwaggerResponse(StatusCodes.Status200OK, "Municípios retornados com sucesso.", typeof(IEnumerable<MunicipioResponseDto>))]
+        public IActionResult ObterTodos(
+            [FromQuery] string? nome = null,
+            [FromQuery] string? uf = null)
         {
-            return Ok(_municipioUseCase.ObterTodos());
+            return Ok(_municipioUseCase.ObterTodos(nome, uf));
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:long}")]
         [AllowAnonymous]
         [SwaggerOperation(Summary = "Buscar município por ID")]
-        [SwaggerResponse(StatusCodes.Status200OK, "Município encontrado com sucesso.")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Município encontrado com sucesso.", typeof(MunicipioResponseDto))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "Município não encontrado.")]
-        public IActionResult ObterPorId(decimal id)
+        public IActionResult ObterPorId(long id)
         {
             var municipio = _municipioUseCase.ObterPorId(id);
             if (municipio == null)

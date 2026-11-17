@@ -10,6 +10,7 @@ namespace BairroVivo.API.Presentation.Controllers;
 
 [ApiController]
 [AllowAnonymous]
+[Route("api/v1/auth")]
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
@@ -24,7 +25,7 @@ public class AuthController : ControllerBase
 
     public class TokenTesteRequestDto
     {
-        public decimal IdUsuario { get; set; } = 1;
+        public long IdUsuario { get; set; } = 1;
         public string Email { get; set; } = "maria@bairrovivo.com";
         public string Perfil { get; set; } = "CIDADAO";
     }
@@ -32,7 +33,7 @@ public class AuthController : ControllerBase
     [HttpPost("token")]
     [SwaggerOperation(
         Summary = "Gerar token JWT para testes no Swagger",
-        Description = "Emite um token JWT compatível com o contrato do Auth Service Java (claims sub, userId, perfil e roles) para facilitar testes dos endpoints autenticados direto pelo Swagger."
+        Description = "Emite um token JWT compatível com o contrato do Auth Service Java (sub decimal em string, roles, perfil) para testes dos endpoints autenticados direto pelo Swagger."
     )]
     [SwaggerResponse(StatusCodes.Status200OK, "Token JWT gerado com sucesso.")]
     public IActionResult GerarToken([FromBody] TokenTesteRequestDto dto)
@@ -52,8 +53,9 @@ public class AuthController : ControllerBase
         var expiraEm = DateTime.UtcNow.AddHours(4);
         var claims = new List<Claim>
         {
-            new("sub", string.IsNullOrWhiteSpace(dto.Email) ? $"usuario{dto.IdUsuario}@bairrovivo.com" : dto.Email),
+            new("sub", dto.IdUsuario.ToString()),
             new("userId", dto.IdUsuario.ToString()),
+            new("email", dto.Email),
             new("perfil", perfil),
             new("roles", perfil)
         };
@@ -71,7 +73,7 @@ public class AuthController : ControllerBase
         {
             token = tokenString,
             tipo = "Bearer",
-            idUsuario = dto.IdUsuario,
+            idUsuario = dto.IdUsuario.ToString(),
             perfil,
             expiraEm
         });

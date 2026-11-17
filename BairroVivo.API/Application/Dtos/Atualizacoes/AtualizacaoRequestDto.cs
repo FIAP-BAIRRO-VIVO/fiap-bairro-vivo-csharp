@@ -1,21 +1,28 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace BairroVivo.Application.Dtos.Atualizacoes
 {
     public class AtualizacaoRequestDto
     {
         [Required(ErrorMessage = "O tipo de atualização é obrigatório.")]
-        [MaxLength(25)]
-        public string Tipo { get; set; } = "CONFIRMACAO";
+        [JsonPropertyName("tipo")]
+        public string Tipo { get; set; } = "COMENTARIO";
 
-        [MaxLength(1000)]
-        public string? Comentario { get; set; }
+        [JsonPropertyName("texto")]
+        public string? Texto { get; set; }
 
-        [MaxLength(500)]
+        [JsonPropertyName("comentario")]
+        public string? Comentario
+        {
+            get => Texto;
+            set => Texto ??= value;
+        }
+
+        [JsonPropertyName("anonimoPublico")]
+        public bool AnonimoPublico { get; set; } = false;
+
+        [JsonPropertyName("urlFotoEvidencia")]
         public string? UrlFotoEvidencia { get; set; }
-
-        public decimal? Latitude { get; set; }
-
-        public decimal? Longitude { get; set; }
     }
 }

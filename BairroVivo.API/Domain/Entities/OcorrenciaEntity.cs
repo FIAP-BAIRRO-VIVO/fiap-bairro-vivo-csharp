@@ -2,59 +2,52 @@ namespace BairroVivo.Domain.Entities
 {
     public class OcorrenciaEntity
     {
-        public decimal IdOcorrencia { get; set; }
+        public long IdOcorrencia { get; set; }
 
-        public string Protocolo { get; set; } = string.Empty;
+        public long IdUsuario { get; set; }
 
-        public decimal IdUsuario { get; set; }
+        public long IdCategoria { get; set; }
 
-        public decimal IdCategoria { get; set; }
-
-        public decimal IdMunicipio { get; set; }
+        public long IdMunicipio { get; set; }
 
         public string Titulo { get; set; } = string.Empty;
 
         public string Descricao { get; set; } = string.Empty;
 
-        public string Status { get; set; } = "ABERTA";
-
-        public string Urgencia { get; set; } = "MEDIA";
-
         public decimal Latitude { get; set; }
 
         public decimal Longitude { get; set; }
 
-        public string? Logradouro { get; set; }
+        public string? EnderecoReferencia { get; set; }
 
-        public string Bairro { get; set; } = string.Empty;
+        public string FlAnonimo { get; set; } = "N";
 
-        public string? Cep { get; set; }
+        public string Status { get; set; } = "ABERTA";
 
-        public int Confirmacoes { get; set; }
+        public int NumCiclo { get; set; } = 1;
 
-        public string ValidadaComunidade { get; set; } = "N";
+        public string FlExcluida { get; set; } = "N";
 
-        public string? CategoriaSugeridaIa { get; set; }
+        public long? IdAutorTransicao { get; set; }
 
-        public decimal? ConfiancaIa { get; set; }
+        public DateTime DtCriacao { get; set; } = DateTime.UtcNow;
 
-        public DateTime CriadaEm { get; set; }
+        public DateTime DtAtualizacao { get; set; } = DateTime.UtcNow;
 
-        public DateTime? AtualizadaEm { get; set; }
-
-        public DateTime? ResolvidaEm { get; set; }
-
-        public DateTime? SlaLimite { get; set; }
-
+        // Propriedades de navegação
         public UsuarioEntity Usuario { get; set; } = null!;
 
         public CategoriaEntity Categoria { get; set; } = null!;
 
         public MunicipioEntity Municipio { get; set; } = null!;
 
+        public UsuarioEntity? AutorTransicao { get; set; }
+
         public ICollection<MidiaOcorrenciaEntity> Midias { get; set; } = new List<MidiaOcorrenciaEntity>();
 
         public ICollection<AtualizacaoOcorrenciaEntity> Atualizacoes { get; set; } = new List<AtualizacaoOcorrenciaEntity>();
+
+        public ICollection<VotoSituacaoEntity> Votos { get; set; } = new List<VotoSituacaoEntity>();
 
         public ICollection<HistoricoStatusOcorrenciaEntity> HistoricoStatus { get; set; } = new List<HistoricoStatusOcorrenciaEntity>();
     }

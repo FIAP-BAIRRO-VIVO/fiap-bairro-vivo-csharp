@@ -9,11 +9,10 @@ namespace BairroVivo.Application.Mappers
         {
             return new MunicipioResponseDto
             {
-                IdMunicipio = entity.IdMunicipio,
+                Id = entity.IdMunicipio.ToString(),
                 CodigoIbge = entity.CodigoIbge,
                 Nome = entity.Nome,
-                Uf = entity.Uf,
-                Ativo = entity.Ativo
+                Uf = entity.Uf
             };
         }
     }

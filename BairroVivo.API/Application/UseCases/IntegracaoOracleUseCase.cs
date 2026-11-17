@@ -18,22 +18,25 @@ public class IntegracaoOracleUseCase : IIntegracaoOracleUseCase
         _ocorrenciaRepository = ocorrenciaRepository;
     }
 
-    public async Task ExecutarRegistrarAtualizacaoAsync(
-        decimal idOcorrencia, decimal idUsuario, AtualizacaoRequestDto dto)
+    public async Task<long> ExecutarRegistrarAtualizacaoAsync(
+        long idOcorrencia, long idUsuario, AtualizacaoRequestDto dto)
     {
         if (_ocorrenciaRepository.ObterPorId(idOcorrencia) == null)
-            throw new KeyNotFoundException("Ocorrência não encontrada.");
+            throw new KeyNotFoundException("Ocorrência não encontrada ou excluída.");
 
         var tipo = AtualizacaoRules.ValidarTipo(dto.Tipo);
-        await _integracaoOracleRepository.ExecutarRegistrarAtualizacaoAsync(
-            idOcorrencia, idUsuario, tipo, dto.Comentario, dto.UrlFotoEvidencia);
+        var flAnonimo = dto.AnonimoPublico ? "S" : "N";
+        var texto = dto.Texto ?? dto.Comentario;
+
+        return await _integracaoOracleRepository.ExecutarRegistrarAtualizacaoAsync(
+            idOcorrencia, idUsuario, tipo, texto, flAnonimo);
     }
 
-    public async Task<int> ContarVotosAtivosAsync(decimal idOcorrencia)
+    public async Task<int> ContarVotosAtivosAsync(long idOcorrencia, string tipoVoto)
     {
         if (_ocorrenciaRepository.ObterPorId(idOcorrencia) == null)
-            throw new KeyNotFoundException("Ocorrência não encontrada.");
+            throw new KeyNotFoundException("Ocorrência não encontrada ou excluída.");
 
-        return await _integracaoOracleRepository.ContarVotosAtivosAsync(idOcorrencia);
+        return await _integracaoOracleRepository.ContarVotosAtivosAsync(idOcorrencia, tipoVoto);
     }
 }

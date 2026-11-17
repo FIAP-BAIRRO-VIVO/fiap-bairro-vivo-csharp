@@ -6,16 +6,25 @@ namespace BairroVivo.Application.Interfaces
     public interface IOcorrenciaUseCase
     {
         IEnumerable<OcorrenciaResponseDto> ObterTodas();
+
         PageResponseDto<OcorrenciaResponseDto> ObterPaginado(
-            int pagina, int tamanho, string? status, string? urgencia,
-            string? bairro, decimal? idCategoria, decimal? idMunicipio, string? ordem);
+            int pagina, int tamanho,
+            decimal? minLat, decimal? maxLat, decimal? minLon, decimal? maxLon,
+            long? idCategoria, long? idMunicipio, string? status, string? ordem);
+
         PageResponseDto<OcorrenciaResponseDto> ObterPorUsuarioPaginado(
-            decimal idUsuario, int pagina, int tamanho, string? status, string? ordem);
-        OcorrenciaResponseDto? ObterPorId(decimal idOcorrencia);
-        OcorrenciaResponseDto Cadastrar(decimal idUsuario, OcorrenciaRequestDto dto);
-        bool Atualizar(decimal idOcorrencia, OcorrenciaRequestDto dto);
-        bool AtualizarStatus(decimal idOcorrencia, decimal? idUsuarioResponsavel, OcorrenciaStatusRequestDto dto);
-        bool Remover(decimal idOcorrencia);
-        MidiaOcorrenciaResponseDto AdicionarMidia(decimal idOcorrencia, MidiaOcorrenciaRequestDto dto);
+            long idUsuario, int pagina, int tamanho, string? status, string? ordem);
+
+        OcorrenciaResponseDto? ObterPorId(long idOcorrencia);
+
+        OcorrenciaResponseDto Cadastrar(long idUsuario, OcorrenciaRequestDto dto);
+
+        bool Atualizar(long idOcorrencia, long idUsuario, OcorrenciaRequestDto dto);
+
+        bool Remover(long idOcorrencia, long idUsuario);
+
+        IEnumerable<HistoricoStatusResponseDto> ObterHistorico(long idOcorrencia);
+
+        MidiaOcorrenciaResponseDto AdicionarMidia(long idOcorrencia, long idUsuario, MidiaOcorrenciaRequestDto dto);
     }
 }

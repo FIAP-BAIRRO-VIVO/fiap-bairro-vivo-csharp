@@ -14,10 +14,10 @@ namespace BairroVivo.Application.UseCases
             _municipioRepository = municipioRepository;
         }
 
-        public IEnumerable<MunicipioResponseDto> ObterTodos() =>
-            _municipioRepository.ObterTodos().Select(m => m.ToResponseDto());
+        public IEnumerable<MunicipioResponseDto> ObterTodos(string? nome = null, string? uf = null) =>
+            _municipioRepository.ObterTodos(nome, uf).Select(m => m.ToResponseDto());
 
-        public MunicipioResponseDto? ObterPorId(decimal idMunicipio) =>
+        public MunicipioResponseDto? ObterPorId(long idMunicipio) =>
             _municipioRepository.ObterPorId(idMunicipio)?.ToResponseDto();
     }
 }

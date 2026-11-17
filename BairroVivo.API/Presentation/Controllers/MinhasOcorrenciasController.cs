@@ -4,6 +4,7 @@ using BairroVivo.API.Application.Interfaces;
 using BairroVivo.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace BairroVivo.API.Presentation.Controllers;
 
@@ -12,6 +13,9 @@ namespace BairroVivo.API.Presentation.Controllers;
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(StatusCodes.Status403Forbidden)]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+[Route("api/v1/ocorrencias/minhas")]
+[Route("api/v1/ocorrencias/me")]
+[Route("api/ocorrencias/minhas")]
 [Route("api/ocorrencias/me")]
 public class MinhasOcorrenciasController : ControllerBase
 {
@@ -25,6 +29,11 @@ public class MinhasOcorrenciasController : ControllerBase
     }
 
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Listar minhas ocorrências (CIDADAO)",
+        Description = "Retorna todas as ocorrências do cidadão logado no JWT (inclusive anônimas), com paginação e links HATEOAS."
+    )]
+    [SwaggerResponse(StatusCodes.Status200OK, "Ocorrências do cidadão retornadas com sucesso.", typeof(PageResponseDto<OcorrenciaItemDto>))]
     public IActionResult Listar(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamanho = 10,
@@ -33,10 +42,10 @@ public class MinhasOcorrenciasController : ControllerBase
     {
         var id = _acesso.ObterIdUsuario(User);
         if (!id.HasValue)
-            return Forbid();
+            return Unauthorized(new { mensagem = "Token JWT sem identificador de cidadão válido." });
 
         var resultado = _ocorrencias.ObterPorUsuarioPaginado(id.Value, pagina, tamanho, status, ordem);
-        var caminho = "/api/ocorrencias/me";
+        var caminho = "/api/v1/ocorrencias/minhas";
         var query = $"&status={Uri.EscapeDataString(status ?? "")}&ordem={Uri.EscapeDataString(ordem ?? "recentes")}";
 
         var itens = resultado.Items.Select(o => new OcorrenciaItemDto
@@ -45,7 +54,7 @@ public class MinhasOcorrenciasController : ControllerBase
             Links = HateoasLinks.ParaOcorrencia(o.IdOcorrencia)
         }).ToList();
 
-        resultado.Links = HateoasLinks.ParaPagina(caminho, resultado.Pagina, resultado.Tamanho, resultado.Total)
+        var links = HateoasLinks.ParaPagina(caminho, resultado.Pagina, resultado.Tamanho, resultado.Total)
             .Select(link => new LinkDto(link.Href + query, link.Rel, link.Method)).ToList();
 
         return Ok(new PageResponseDto<OcorrenciaItemDto>
@@ -54,7 +63,7 @@ public class MinhasOcorrenciasController : ControllerBase
             RegistroRetornado = resultado.RegistroRetornado,
             TotalRegistros = resultado.TotalRegistros,
             Items = itens,
-            Links = resultado.Links
+            Links = links
         });
     }
 }

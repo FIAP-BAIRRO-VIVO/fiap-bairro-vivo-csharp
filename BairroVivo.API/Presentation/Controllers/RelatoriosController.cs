@@ -1,5 +1,5 @@
-using BairroVivo.API.Application.Dtos;
-using BairroVivo.API.Presentation;
+using BairroVivo.API.Application.Interfaces;
+using BairroVivo.Application.Dtos.Relatorios;
 using BairroVivo.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,67 +12,44 @@ namespace BairroVivo.Presentation.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Route("api/relatorios-bairro")]
+    [Route("api/v1/admin/relatorios")]
+    [Route("api/admin/relatorios")]
     public class RelatoriosController : ControllerBase
     {
-        private readonly IRelatorioBairroUseCase _relatorioUseCase;
+        private readonly IRelatorioUseCase _relatorioUseCase;
+        private readonly IOcorrenciaAccessService _acesso;
 
-        public RelatoriosController(IRelatorioBairroUseCase relatorioUseCase)
+        public RelatoriosController(
+            IRelatorioUseCase relatorioUseCase,
+            IOcorrenciaAccessService acesso)
         {
             _relatorioUseCase = relatorioUseCase;
+            _acesso = acesso;
         }
 
-        [HttpGet]
-        [AllowAnonymous]
+        [HttpGet("ocorrencias")]
         [SwaggerOperation(
-            Summary = "Listar relatórios executivos de bairro gerados por IA",
-            Description = "Retorna os relatórios periódicos de bairro com paginação e links HATEOAS."
+            Summary = "Relatório agregado de ocorrências (ADMIN)",
+            Description = "Retorna contadores agregados por município, categoria e status baseados na VW_RELATORIO_OCORRENCIAS da base Oracle v1.2."
         )]
-        [SwaggerResponse(StatusCodes.Status200OK, "Relatórios retornados com sucesso.")]
-        public IActionResult ObterPaginado(
-            [FromQuery] int pagina = 1,
-            [FromQuery] int tamanho = 10,
-            [FromQuery] string? bairro = null,
-            [FromQuery] string? periodoRef = null)
+        [SwaggerResponse(StatusCodes.Status200OK, "Relatório retornado com sucesso.", typeof(IEnumerable<RelatorioOcorrenciaResponseDto>))]
+        [SwaggerResponse(StatusCodes.Status403Forbidden, "Acesso restrito ao perfil ADMIN.")]
+        public IActionResult ObterRelatorioOcorrencias(
+            [FromQuery] long? idMunicipio = null,
+            [FromQuery] long? idCategoria = null,
+            [FromQuery] string? status = null)
         {
-            var resultado = _relatorioUseCase.ObterPaginado(pagina, tamanho, bairro, periodoRef);
-            var itens = resultado.Items.ToList();
-            foreach (var item in itens)
+            var userId = _acesso.ObterIdUsuario(User);
+            if (!userId.HasValue || _acesso.ObterPerfil(User, userId.Value) != "ADMIN")
             {
-                item.Links = new List<LinkDto>
+                return StatusCode(StatusCodes.Status403Forbidden, new
                 {
-                    new($"/api/relatorios-bairro/{item.IdRelatorio}", "self", "GET"),
-                    new("/api/relatorios-bairro", "collection", "GET")
-                };
+                    mensagem = "Apenas administradores podem consultar relatórios executivos."
+                });
             }
 
-            var caminho = "/api/relatorios-bairro";
-            var query = $"&bairro={Uri.EscapeDataString(bairro ?? "")}&periodoRef={Uri.EscapeDataString(periodoRef ?? "")}";
-            resultado.Items = itens;
-            resultado.Links = HateoasLinks.ParaPagina(caminho, resultado.Pagina, resultado.Tamanho, resultado.Total)
-                .Select(link => new LinkDto(link.Href + query, link.Rel, link.Method)).ToList();
-
-            return Ok(resultado);
-        }
-
-        [HttpGet("{id}")]
-        [AllowAnonymous]
-        [SwaggerOperation(Summary = "Buscar relatório de bairro por ID")]
-        [SwaggerResponse(StatusCodes.Status200OK, "Relatório encontrado com sucesso.")]
-        [SwaggerResponse(StatusCodes.Status404NotFound, "Relatório não encontrado.")]
-        public IActionResult ObterPorId(decimal id)
-        {
-            var relatorio = _relatorioUseCase.ObterPorId(id);
-            if (relatorio == null)
-                return NotFound(new { mensagem = "Relatório de bairro não encontrado." });
-
-            relatorio.Links = new List<LinkDto>
-            {
-                new($"/api/relatorios-bairro/{relatorio.IdRelatorio}", "self", "GET"),
-                new("/api/relatorios-bairro", "collection", "GET")
-            };
-
-            return Ok(relatorio);
+            var dados = _relatorioUseCase.ObterRelatorioOcorrencias(idMunicipio, idCategoria, status);
+            return Ok(dados);
         }
     }
 }

@@ -13,20 +13,26 @@ namespace BairroVivo.Infrastructure.Data.Repositories
             _context = context;
         }
 
-        public IEnumerable<AtualizacaoOcorrenciaEntity> ObterPorOcorrencia(decimal idOcorrencia) =>
-            _context.AtualizacoesOcorrencia
+        public IEnumerable<AtualizacaoOcorrenciaEntity> ObterPorOcorrencia(long idOcorrencia) =>
+            _context.Atualizacoes
                 .Include(a => a.Usuario)
+                .Include(a => a.Midias)
+                .Include(a => a.Voto)
+                .Include(a => a.Ocorrencia)
                 .Where(a => a.IdOcorrencia == idOcorrencia)
-                .OrderByDescending(a => a.CriadaEm)
+                .OrderByDescending(a => a.DtCriacao)
                 .ToList();
 
         public (IEnumerable<AtualizacaoOcorrenciaEntity> Itens, int Total) ObterPorOcorrenciaPaginado(
-            decimal idOcorrencia, int deslocamento, int limite)
+            long idOcorrencia, int deslocamento, int limite)
         {
-            var consulta = _context.AtualizacoesOcorrencia
+            var consulta = _context.Atualizacoes
                 .Include(a => a.Usuario)
+                .Include(a => a.Midias)
+                .Include(a => a.Voto)
+                .Include(a => a.Ocorrencia)
                 .Where(a => a.IdOcorrencia == idOcorrencia)
-                .OrderByDescending(a => a.CriadaEm)
+                .OrderByDescending(a => a.DtCriacao)
                 .ThenByDescending(a => a.IdAtualizacao);
 
             var total = consulta.Count();
@@ -34,20 +40,38 @@ namespace BairroVivo.Infrastructure.Data.Repositories
             return (itens, total);
         }
 
-        public AtualizacaoOcorrenciaEntity? ObterPorId(decimal idAtualizacao) =>
-            _context.AtualizacoesOcorrencia
+        public AtualizacaoOcorrenciaEntity? ObterPorId(long idAtualizacao) =>
+            _context.Atualizacoes
                 .Include(a => a.Usuario)
+                .Include(a => a.Midias)
+                .Include(a => a.Voto)
+                .Include(a => a.Ocorrencia)
                 .FirstOrDefault(a => a.IdAtualizacao == idAtualizacao);
 
-        public bool JaVotou(decimal idOcorrencia, decimal idUsuario, string tipo) =>
-            _context.AtualizacoesOcorrencia
-                .Count(a => a.IdOcorrencia == idOcorrencia && a.IdUsuario == idUsuario && a.Tipo == tipo) > 0;
+        public bool JaVotouNoCiclo(long idOcorrencia, long idUsuario, int numCiclo) =>
+            _context.Votos.Any(v => v.IdOcorrencia == idOcorrencia && v.IdUsuario == idUsuario && v.NumCiclo == numCiclo);
 
         public AtualizacaoOcorrenciaEntity Registrar(AtualizacaoOcorrenciaEntity atualizacao)
         {
-            _context.AtualizacoesOcorrencia.Add(atualizacao);
+            _context.Atualizacoes.Add(atualizacao);
             _context.SaveChanges();
             return atualizacao;
+        }
+
+        public void RegistrarVoto(VotoSituacaoEntity voto)
+        {
+            _context.Votos.Add(voto);
+            _context.SaveChanges();
+        }
+
+        public int ContarVotosCiclo(long idOcorrencia, int numCiclo, string tipoVoto) =>
+            _context.Votos.Count(v => v.IdOcorrencia == idOcorrencia && v.NumCiclo == numCiclo && v.TipoVoto == tipoVoto);
+
+        public MidiaOcorrenciaEntity AdicionarMidia(MidiaOcorrenciaEntity midia)
+        {
+            _context.Midias.Add(midia);
+            _context.SaveChanges();
+            return midia;
         }
     }
 }

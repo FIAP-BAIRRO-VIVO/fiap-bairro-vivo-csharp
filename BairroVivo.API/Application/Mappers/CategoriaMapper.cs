@@ -12,9 +12,7 @@ namespace BairroVivo.Application.Mappers
                 Nome = dto.Nome.Trim(),
                 Descricao = dto.Descricao?.Trim(),
                 Icone = dto.Icone?.Trim(),
-                CorHex = dto.CorHex?.Trim(),
-                SlaDiasPadrao = dto.SlaDiasPadrao,
-                Ativo = "S"
+                FlAtiva = "S"
             };
         }
 
@@ -23,21 +21,17 @@ namespace BairroVivo.Application.Mappers
             entity.Nome = dto.Nome.Trim();
             entity.Descricao = dto.Descricao?.Trim();
             entity.Icone = dto.Icone?.Trim();
-            entity.CorHex = dto.CorHex?.Trim();
-            entity.SlaDiasPadrao = dto.SlaDiasPadrao;
         }
 
         public static CategoriaResponseDto ToResponseDto(this CategoriaEntity entity)
         {
             return new CategoriaResponseDto
             {
-                IdCategoria = entity.IdCategoria,
+                Id = entity.IdCategoria.ToString(),
                 Nome = entity.Nome,
                 Descricao = entity.Descricao,
                 Icone = entity.Icone,
-                CorHex = entity.CorHex,
-                SlaDiasPadrao = entity.SlaDiasPadrao,
-                Ativo = entity.Ativo
+                Ativa = entity.FlAtiva == "S"
             };
         }
     }

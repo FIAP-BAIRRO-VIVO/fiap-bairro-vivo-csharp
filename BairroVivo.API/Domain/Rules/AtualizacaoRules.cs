@@ -1,36 +1,48 @@
 namespace BairroVivo.Domain.Rules;
 
-// Regras de dominio da votacao e atualizacao comunitaria (Ainda esta la / Ja foi resolvido).
+// Regras de domínio da votação e atualização comunitária conforme PKG_COMUNIDADE no Oracle v1.2
 public static class AtualizacaoRules
 {
     private static readonly string[] TiposValidos =
     {
-        "CONFIRMACAO",
-        "JA_RESOLVIDO",
         "COMENTARIO",
-        "RESPOSTA_PREFEITURA"
+        "PERSISTE",
+        "RESOLVIDO"
     };
 
     public static string ValidarTipo(string? tipo)
     {
         var normalizado = tipo?.Trim().ToUpperInvariant() ?? string.Empty;
         if (!TiposValidos.Contains(normalizado))
-            throw new ArgumentException("Tipo de atualização inválido. Utilize CONFIRMACAO, JA_RESOLVIDO, COMENTARIO ou RESPOSTA_PREFEITURA.");
+            throw new ArgumentException("Tipo de atualização inválido. Utilize COMENTARIO, PERSISTE ou RESOLVIDO.");
         return normalizado;
     }
 
-    public static (string ValidadaComunidade, string UrgenciaAtualizada) AvaliarValidacaoComunitaria(
-        int confirmacoesAtuais,
-        string urgenciaAtual)
+    public static bool ContaComoVoto(string statusAtual, string tipoAtualizacao)
     {
-        if (confirmacoesAtuais >= 3)
+        if (statusAtual == "ABERTA" && tipoAtualizacao == "RESOLVIDO")
+            return true;
+        if (statusAtual == "RESOLVIDA" && tipoAtualizacao == "PERSISTE")
+            return true;
+        return false;
+    }
+
+    public static (bool Transiciona, string? NovoStatus) AvaliarTransicaoCiclo(
+        string statusAtual,
+        string tipoAtualizacao,
+        int totalVotosNoCicloAposEste)
+    {
+        if (!ContaComoVoto(statusAtual, tipoAtualizacao))
+            return (false, null);
+
+        // Regra dos 2 votos da Global Solution / Oracle v1.2:
+        // 2 votos válidos de usuários distintos encerram ou reabrem a ocorrência
+        if (totalVotosNoCicloAposEste >= 2)
         {
-            var novaUrgencia = urgenciaAtual == "BAIXA" || urgenciaAtual == "MEDIA"
-                ? "ALTA"
-                : urgenciaAtual;
-            return ("S", novaUrgencia);
+            var novoStatus = statusAtual == "ABERTA" ? "RESOLVIDA" : "ABERTA";
+            return (true, novoStatus);
         }
 
-        return ("N", urgenciaAtual);
+        return (false, null);
     }
 }

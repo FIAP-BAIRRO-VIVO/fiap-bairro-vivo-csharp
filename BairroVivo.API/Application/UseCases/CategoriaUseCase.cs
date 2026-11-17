@@ -17,7 +17,7 @@ namespace BairroVivo.Application.UseCases
         public IEnumerable<CategoriaResponseDto> ObterTodas() =>
             _categoriaRepository.ObterTodas().Select(c => c.ToResponseDto());
 
-        public CategoriaResponseDto? ObterPorId(decimal idCategoria) =>
+        public CategoriaResponseDto? ObterPorId(long idCategoria) =>
             _categoriaRepository.ObterPorId(idCategoria)?.ToResponseDto();
 
         public CategoriaResponseDto Cadastrar(CategoriaRequestDto dto)
@@ -29,7 +29,7 @@ namespace BairroVivo.Application.UseCases
             return salva.ToResponseDto();
         }
 
-        public bool Atualizar(decimal idCategoria, CategoriaRequestDto dto)
+        public bool Atualizar(long idCategoria, CategoriaRequestDto dto)
         {
             var categoria = _categoriaRepository.ObterPorId(idCategoria);
             if (categoria == null)
@@ -43,7 +43,7 @@ namespace BairroVivo.Application.UseCases
             return true;
         }
 
-        public bool Remover(decimal idCategoria)
+        public bool Remover(long idCategoria)
         {
             var categoria = _categoriaRepository.ObterPorId(idCategoria);
             if (categoria == null)

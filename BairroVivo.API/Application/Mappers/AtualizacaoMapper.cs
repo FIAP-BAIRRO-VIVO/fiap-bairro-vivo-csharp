@@ -1,4 +1,5 @@
 using BairroVivo.Application.Dtos.Atualizacoes;
+using BairroVivo.Application.Mappers;
 using BairroVivo.Domain.Entities;
 
 namespace BairroVivo.Application.Mappers
@@ -7,36 +8,39 @@ namespace BairroVivo.Application.Mappers
     {
         public static AtualizacaoOcorrenciaEntity ToEntity(
             this AtualizacaoRequestDto dto,
-            decimal idOcorrencia,
-            decimal idUsuario)
+            long idOcorrencia,
+            long idUsuario)
         {
             return new AtualizacaoOcorrenciaEntity
             {
                 IdOcorrencia = idOcorrencia,
                 IdUsuario = idUsuario,
                 Tipo = dto.Tipo,
-                Comentario = dto.Comentario?.Trim(),
-                UrlFotoEvidencia = dto.UrlFotoEvidencia?.Trim(),
-                Latitude = dto.Latitude,
-                Longitude = dto.Longitude,
-                CriadaEm = DateTime.Now
+                Texto = dto.Texto ?? dto.Comentario,
+                FlAnonimo = dto.AnonimoPublico ? "S" : "N",
+                DtCriacao = DateTime.UtcNow
             };
         }
 
         public static AtualizacaoResponseDto ToResponseDto(this AtualizacaoOcorrenciaEntity entity)
         {
+            var autorPublico = entity.FlAnonimo == "S"
+                ? "Cidadao anonimo"
+                : (!string.IsNullOrWhiteSpace(entity.Usuario?.Nome) ? entity.Usuario.Nome : "Cidadao");
+
             return new AtualizacaoResponseDto
             {
-                IdAtualizacao = entity.IdAtualizacao,
-                IdOcorrencia = entity.IdOcorrencia,
-                IdUsuario = entity.IdUsuario,
-                NomeUsuario = entity.Usuario?.Nome ?? string.Empty,
+                Id = entity.IdAtualizacao.ToString(),
+                IdOcorrencia = entity.IdOcorrencia.ToString(),
                 Tipo = entity.Tipo,
-                Comentario = entity.Comentario,
-                UrlFotoEvidencia = entity.UrlFotoEvidencia,
-                Latitude = entity.Latitude,
-                Longitude = entity.Longitude,
-                CriadaEm = entity.CriadaEm
+                Texto = entity.Texto,
+                AutorExibicao = autorPublico,
+                AnonimoPublico = entity.FlAnonimo == "S",
+                ContabilizadaComoVoto = entity.Voto != null,
+                StatusAtual = entity.Ocorrencia?.Status ?? string.Empty,
+                NumeroCiclo = entity.Ocorrencia?.NumCiclo ?? 1,
+                DtCriacao = entity.DtCriacao,
+                Midias = entity.Midias?.Select(m => m.ToResponseDto()).ToList() ?? new()
             };
         }
     }

@@ -12,6 +12,7 @@ namespace BairroVivo.Presentation.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Route("api/v1/categorias")]
     [Route("api/categorias")]
     public class CategoriasController : ControllerBase
     {
@@ -29,21 +30,21 @@ namespace BairroVivo.Presentation.Controllers
         [HttpGet]
         [AllowAnonymous]
         [SwaggerOperation(
-            Summary = "Listar categorias de zeladoria urbana",
-            Description = "Retorna todas as categorias ativas disponíveis para abertura de ocorrências."
+            Summary = "Listar categorias ativas de zeladoria urbana",
+            Description = "Retorna todas as categorias ativas (FL_ATIVA = 'S') disponíveis para abertura de ocorrências."
         )]
-        [SwaggerResponse(StatusCodes.Status200OK, "Categorias retornadas com sucesso.")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Categorias retornadas com sucesso.", typeof(IEnumerable<CategoriaResponseDto>))]
         public IActionResult ObterTodas()
         {
             return Ok(_categoriaUseCase.ObterTodas());
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:long}")]
         [AllowAnonymous]
         [SwaggerOperation(Summary = "Buscar categoria por ID")]
-        [SwaggerResponse(StatusCodes.Status200OK, "Categoria encontrada com sucesso.")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Categoria encontrada com sucesso.", typeof(CategoriaResponseDto))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "Categoria não encontrada.")]
-        public IActionResult ObterPorId(decimal id)
+        public IActionResult ObterPorId(long id)
         {
             var categoria = _categoriaUseCase.ObterPorId(id);
             if (categoria == null)
@@ -54,7 +55,7 @@ namespace BairroVivo.Presentation.Controllers
 
         [HttpPost]
         [SwaggerOperation(Summary = "Cadastrar nova categoria (ADMIN)")]
-        [SwaggerResponse(StatusCodes.Status201Created, "Categoria criada com sucesso.")]
+        [SwaggerResponse(StatusCodes.Status201Created, "Categoria criada com sucesso.", typeof(CategoriaResponseDto))]
         public IActionResult Cadastrar([FromBody] CategoriaRequestDto dto)
         {
             var userId = _acesso.ObterIdUsuario(User);
@@ -65,10 +66,10 @@ namespace BairroVivo.Presentation.Controllers
             return CreatedAtAction(nameof(ObterPorId), new { id = criada.IdCategoria }, criada);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:long}")]
         [SwaggerOperation(Summary = "Atualizar categoria (ADMIN)")]
         [SwaggerResponse(StatusCodes.Status204NoContent, "Categoria atualizada com sucesso.")]
-        public IActionResult Atualizar(decimal id, [FromBody] CategoriaRequestDto dto)
+        public IActionResult Atualizar(long id, [FromBody] CategoriaRequestDto dto)
         {
             var userId = _acesso.ObterIdUsuario(User);
             if (!userId.HasValue || _acesso.ObterPerfil(User, userId.Value) != "ADMIN")
@@ -80,10 +81,10 @@ namespace BairroVivo.Presentation.Controllers
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:long}")]
         [SwaggerOperation(Summary = "Inativar categoria (ADMIN)")]
         [SwaggerResponse(StatusCodes.Status204NoContent, "Categoria inativada com sucesso.")]
-        public IActionResult Remover(decimal id)
+        public IActionResult Remover(long id)
         {
             var userId = _acesso.ObterIdUsuario(User);
             if (!userId.HasValue || _acesso.ObterPerfil(User, userId.Value) != "ADMIN")

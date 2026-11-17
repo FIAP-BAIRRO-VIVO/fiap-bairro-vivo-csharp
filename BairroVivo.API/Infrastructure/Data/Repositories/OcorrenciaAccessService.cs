@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BairroVivo.Infrastructure.Data.Repositories;
 
-// Consulta os vinculos no Oracle (TB_USUARIO e TB_OCORRENCIA), nunca aceitando ID livre sem validacao JWT.
+// Consulta os vínculos no Oracle (TB_USUARIO e TB_OCORRENCIA), nunca aceitando ID livre sem validação JWT.
 public class OcorrenciaAccessService : IOcorrenciaAccessService
 {
     private readonly ApplicationContext _db;
@@ -14,30 +14,30 @@ public class OcorrenciaAccessService : IOcorrenciaAccessService
         _db = db;
     }
 
-    public decimal? ObterIdUsuario(ClaimsPrincipal usuario)
+    public long? ObterIdUsuario(ClaimsPrincipal usuario)
     {
         var claimId = usuario.FindFirst("userId")?.Value
             ?? usuario.FindFirst("idUsuario")?.Value
             ?? usuario.FindFirst("sub")?.Value;
 
-        if (decimal.TryParse(claimId, out var id) && id > 0)
+        if (long.TryParse(claimId, out var id) && id > 0)
             return id;
 
-        // Suporta tambem o padrao Spring Security onde "sub" contem o e-mail do usuario
+        // Suporta também o padrão Spring Security onde "sub" contém o e-mail do usuário
         var email = usuario.FindFirst("email")?.Value ?? claimId;
         if (!string.IsNullOrWhiteSpace(email))
         {
             var emailNormalizado = email.Trim().ToLowerInvariant();
             return _db.Usuarios.AsNoTracking()
                 .Where(u => u.Email.ToLower() == emailNormalizado)
-                .Select(u => (decimal?)u.IdUsuario)
+                .Select(u => (long?)u.IdUsuario)
                 .FirstOrDefault();
         }
 
         return null;
     }
 
-    public string ObterPerfil(ClaimsPrincipal usuario, decimal idUsuario)
+    public string ObterPerfil(ClaimsPrincipal usuario, long idUsuario)
     {
         var perfilClaim = usuario.FindFirst("perfil")?.Value
             ?? usuario.FindFirst("roles")?.Value
@@ -52,33 +52,37 @@ public class OcorrenciaAccessService : IOcorrenciaAccessService
 
         return _db.Usuarios.AsNoTracking()
             .Where(u => u.IdUsuario == idUsuario)
-            .Select(u => u.Perfil)
+            .Select(u => u.Papel)
             .FirstOrDefault() ?? "CIDADAO";
     }
 
-    public bool UsuarioAtivo(decimal idUsuario) =>
+    public bool UsuarioAtivo(long idUsuario) =>
         _db.Usuarios.AsNoTracking()
-            .Count(u => u.IdUsuario == idUsuario && (u.Ativo == "S" || u.Ativo == "ATIVO")) > 0;
+            .Count(u => u.IdUsuario == idUsuario && u.FlAtivo == "S") > 0;
 
-    public bool ExisteOcorrencia(decimal idOcorrencia) =>
-        _db.Ocorrencias.AsNoTracking().Count(o => o.IdOcorrencia == idOcorrencia) > 0;
+    public bool ExisteOcorrencia(long idOcorrencia) =>
+        _db.Ocorrencias.AsNoTracking().Count(o => o.IdOcorrencia == idOcorrencia && o.FlExcluida == "N") > 0;
 
-    public bool PodeModificarOcorrencia(decimal idUsuario, decimal idOcorrencia, string perfil)
+    public bool EhAutorOcorrencia(long idUsuario, long idOcorrencia)
+    {
+        return _db.Ocorrencias.AsNoTracking()
+            .Any(o => o.IdOcorrencia == idOcorrencia && o.IdUsuario == idUsuario && o.FlExcluida == "N");
+    }
+
+    public bool EhAutorAtualizacao(long idUsuario, long idAtualizacao)
+    {
+        return _db.Atualizacoes.AsNoTracking()
+            .Any(a => a.IdAtualizacao == idAtualizacao && a.IdUsuario == idUsuario);
+    }
+
+    public bool PodeModificarOcorrencia(long idUsuario, long idOcorrencia, string perfil)
     {
         if (!UsuarioAtivo(idUsuario))
             return false;
 
-        if (perfil == "ADMIN")
-            return true;
-
-        var ocorrencia = _db.Ocorrencias.AsNoTracking()
-            .Where(o => o.IdOcorrencia == idOcorrencia)
-            .Select(o => new { o.IdUsuario })
-            .FirstOrDefault();
-
-        if (ocorrencia is null)
-            return false;
-
-        return ocorrencia.IdUsuario == idUsuario;
+        // Conforme a especificação do Bairro Vivo v1.2:
+        // Apenas o autor original CIDADAO pode editar ou excluir logicamente sua ocorrência.
+        // ADMIN não altera ocorrências.
+        return EhAutorOcorrencia(idUsuario, idOcorrencia);
     }
 }

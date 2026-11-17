@@ -2,7 +2,7 @@ namespace BairroVivo.Domain.Entities
 {
     public class UsuarioEntity
     {
-        public decimal IdUsuario { get; set; }
+        public long IdUsuario { get; set; }
 
         public string Nome { get; set; } = string.Empty;
 
@@ -10,25 +10,13 @@ namespace BairroVivo.Domain.Entities
 
         public string SenhaHash { get; set; } = string.Empty;
 
-        public string? CpfHash { get; set; }
+        public string Papel { get; set; } = "CIDADAO";
 
-        public string? Telefone { get; set; }
+        public string FlAtivo { get; set; } = "S";
 
-        public string? Bairro { get; set; }
+        public DateTime DtCriacao { get; set; } = DateTime.UtcNow;
 
-        public decimal? IdMunicipio { get; set; }
-
-        public string Perfil { get; set; } = "CIDADAO";
-
-        public int Pontos { get; set; }
-
-        public string Ativo { get; set; } = "S";
-
-        public DateTime CriadoEm { get; set; }
-
-        public DateTime? AtualizadoEm { get; set; }
-
-        public MunicipioEntity? Municipio { get; set; }
+        public DateTime DtAtualizacao { get; set; } = DateTime.UtcNow;
 
         public ICollection<OcorrenciaEntity> Ocorrencias { get; set; } = new List<OcorrenciaEntity>();
 

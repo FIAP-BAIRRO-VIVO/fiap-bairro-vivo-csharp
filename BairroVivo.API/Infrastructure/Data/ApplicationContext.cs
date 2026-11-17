@@ -14,56 +14,53 @@ namespace BairroVivo.Infrastructure.Data
         public DbSet<UsuarioEntity> Usuarios { get; set; }
         public DbSet<CategoriaEntity> Categorias { get; set; }
         public DbSet<OcorrenciaEntity> Ocorrencias { get; set; }
-        public DbSet<MidiaOcorrenciaEntity> MidiasOcorrencia { get; set; }
-        public DbSet<AtualizacaoOcorrenciaEntity> AtualizacoesOcorrencia { get; set; }
-        public DbSet<HistoricoStatusOcorrenciaEntity> HistoricoStatusOcorrencias { get; set; }
-        public DbSet<AuditoriaOcorrenciaEntity> AuditoriasOcorrencia { get; set; }
+        public DbSet<AtualizacaoOcorrenciaEntity> Atualizacoes { get; set; }
+        public DbSet<MidiaOcorrenciaEntity> Midias { get; set; }
+        public DbSet<VotoSituacaoEntity> Votos { get; set; }
+        public DbSet<HistoricoStatusOcorrenciaEntity> HistoricoStatus { get; set; }
         public DbSet<RequisicaoIdempotenteEntity> RequisicoesIdempotentes { get; set; }
-        public DbSet<RelatorioBairroEntity> RelatoriosBairro { get; set; }
+        public DbSet<RelatorioOcorrenciaEntity> RelatoriosOcorrencia { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // TB_MUNICIPIO
             modelBuilder.Entity<MunicipioEntity>(entity =>
             {
                 entity.ToTable("TB_MUNICIPIO");
-                entity.HasKey(m => m.IdMunicipio).HasName("PK_TB_MUNICIPIO");
+                entity.HasKey(m => m.IdMunicipio).HasName("PK_MUNICIPIO");
 
                 entity.Property(m => m.IdMunicipio)
                     .HasColumnName("ID_MUNICIPIO")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .ValueGeneratedOnAdd();
 
                 entity.Property(m => m.CodigoIbge)
                     .HasColumnName("CODIGO_IBGE")
-                    .HasMaxLength(7)
-                    .IsRequired();
+                    .HasColumnType("NUMBER(7)");
 
                 entity.Property(m => m.Nome)
                     .HasColumnName("NOME")
-                    .HasMaxLength(100)
+                    .HasMaxLength(120)
                     .IsRequired();
 
                 entity.Property(m => m.Uf)
                     .HasColumnName("UF")
                     .HasMaxLength(2)
-                    .IsRequired();
-
-                entity.Property(m => m.Ativo)
-                    .HasColumnName("ATIVO")
-                    .HasMaxLength(1)
+                    .IsFixedLength()
                     .IsRequired();
             });
 
+            // TB_USUARIO
             modelBuilder.Entity<UsuarioEntity>(entity =>
             {
                 entity.ToTable("TB_USUARIO");
-                entity.HasKey(u => u.IdUsuario).HasName("PK_TB_USUARIO");
+                entity.HasKey(u => u.IdUsuario).HasName("PK_USUARIO");
 
                 entity.Property(u => u.IdUsuario)
                     .HasColumnName("ID_USUARIO")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .ValueGeneratedOnAdd();
 
                 entity.Property(u => u.Nome)
@@ -73,7 +70,7 @@ namespace BairroVivo.Infrastructure.Data
 
                 entity.Property(u => u.Email)
                     .HasColumnName("EMAIL")
-                    .HasMaxLength(150)
+                    .HasMaxLength(180)
                     .IsRequired();
 
                 entity.Property(u => u.SenhaHash)
@@ -81,136 +78,94 @@ namespace BairroVivo.Infrastructure.Data
                     .HasMaxLength(255)
                     .IsRequired();
 
-                entity.Property(u => u.CpfHash)
-                    .HasColumnName("CPF_HASH")
-                    .HasMaxLength(64);
-
-                entity.Property(u => u.Telefone)
-                    .HasColumnName("TELEFONE")
-                    .HasMaxLength(20);
-
-                entity.Property(u => u.Bairro)
-                    .HasColumnName("BAIRRO")
-                    .HasMaxLength(100);
-
-                entity.Property(u => u.IdMunicipio)
-                    .HasColumnName("ID_MUNICIPIO")
-                    .HasColumnType("NUMBER(10)");
-
-                entity.Property(u => u.Perfil)
-                    .HasColumnName("PERFIL")
-                    .HasMaxLength(20)
+                entity.Property(u => u.Papel)
+                    .HasColumnName("PAPEL")
+                    .HasMaxLength(12)
+                    .HasDefaultValue("CIDADAO")
                     .IsRequired();
 
-                entity.Property(u => u.Pontos)
-                    .HasColumnName("PONTOS")
-                    .HasColumnType("NUMBER(10)");
-
-                entity.Property(u => u.Ativo)
-                    .HasColumnName("ATIVO")
+                entity.Property(u => u.FlAtivo)
+                    .HasColumnName("FL_ATIVO")
                     .HasMaxLength(1)
+                    .IsFixedLength()
+                    .HasDefaultValue("S")
                     .IsRequired();
 
-                entity.Property(u => u.CriadoEm)
-                    .HasColumnName("CRIADO_EM")
+                entity.Property(u => u.DtCriacao)
+                    .HasColumnName("DT_CRIACAO")
                     .IsRequired();
 
-                entity.Property(u => u.AtualizadoEm)
-                    .HasColumnName("ATUALIZADO_EM");
-
-                entity.HasOne(u => u.Municipio)
-                    .WithMany(m => m.Usuarios)
-                    .HasForeignKey(u => u.IdMunicipio)
-                    .HasConstraintName("FK_USUARIO_MUNICIPIO")
-                    .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(u => u.DtAtualizacao)
+                    .HasColumnName("DT_ATUALIZACAO")
+                    .IsRequired();
             });
 
+            // TB_CATEGORIA
             modelBuilder.Entity<CategoriaEntity>(entity =>
             {
                 entity.ToTable("TB_CATEGORIA");
-                entity.HasKey(c => c.IdCategoria).HasName("PK_TB_CATEGORIA");
+                entity.HasKey(c => c.IdCategoria).HasName("PK_CATEGORIA");
 
                 entity.Property(c => c.IdCategoria)
                     .HasColumnName("ID_CATEGORIA")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .ValueGeneratedOnAdd();
 
                 entity.Property(c => c.Nome)
                     .HasColumnName("NOME")
-                    .HasMaxLength(60)
+                    .HasMaxLength(100)
                     .IsRequired();
 
                 entity.Property(c => c.Descricao)
                     .HasColumnName("DESCRICAO")
-                    .HasMaxLength(255);
+                    .HasMaxLength(400);
 
                 entity.Property(c => c.Icone)
                     .HasColumnName("ICONE")
                     .HasMaxLength(40);
 
-                entity.Property(c => c.CorHex)
-                    .HasColumnName("COR_HEX")
-                    .HasMaxLength(7);
-
-                entity.Property(c => c.SlaDiasPadrao)
-                    .HasColumnName("SLA_DIAS_PADRAO")
-                    .HasColumnType("NUMBER(3)")
-                    .IsRequired();
-
-                entity.Property(c => c.Ativo)
-                    .HasColumnName("ATIVO")
+                entity.Property(c => c.FlAtiva)
+                    .HasColumnName("FL_ATIVA")
                     .HasMaxLength(1)
+                    .IsFixedLength()
+                    .HasDefaultValue("S")
                     .IsRequired();
             });
 
+            // TB_OCORRENCIA
             modelBuilder.Entity<OcorrenciaEntity>(entity =>
             {
                 entity.ToTable("TB_OCORRENCIA");
-                entity.HasKey(o => o.IdOcorrencia).HasName("PK_TB_OCORRENCIA");
+                entity.HasKey(o => o.IdOcorrencia).HasName("PK_OCORRENCIA");
 
                 entity.Property(o => o.IdOcorrencia)
                     .HasColumnName("ID_OCORRENCIA")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .ValueGeneratedOnAdd();
-
-                entity.Property(o => o.Protocolo)
-                    .HasColumnName("PROTOCOLO")
-                    .HasMaxLength(30)
-                    .IsRequired();
 
                 entity.Property(o => o.IdUsuario)
                     .HasColumnName("ID_USUARIO")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .IsRequired();
 
                 entity.Property(o => o.IdCategoria)
                     .HasColumnName("ID_CATEGORIA")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .IsRequired();
 
                 entity.Property(o => o.IdMunicipio)
                     .HasColumnName("ID_MUNICIPIO")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .IsRequired();
 
                 entity.Property(o => o.Titulo)
                     .HasColumnName("TITULO")
-                    .HasMaxLength(140)
+                    .HasMaxLength(150)
                     .IsRequired();
 
                 entity.Property(o => o.Descricao)
                     .HasColumnName("DESCRICAO")
-                    .HasMaxLength(2000)
-                    .IsRequired();
-
-                entity.Property(o => o.Status)
-                    .HasColumnName("STATUS")
-                    .HasMaxLength(20)
-                    .IsRequired();
-
-                entity.Property(o => o.Urgencia)
-                    .HasColumnName("URGENCIA")
-                    .HasMaxLength(15)
+                    .HasColumnType("CLOB")
                     .IsRequired();
 
                 entity.Property(o => o.Latitude)
@@ -223,49 +178,47 @@ namespace BairroVivo.Infrastructure.Data
                     .HasColumnType("NUMBER(10,7)")
                     .IsRequired();
 
-                entity.Property(o => o.Logradouro)
-                    .HasColumnName("LOGRADOURO")
-                    .HasMaxLength(200);
+                entity.Property(o => o.EnderecoReferencia)
+                    .HasColumnName("ENDERECO_REFERENCIA")
+                    .HasMaxLength(255);
 
-                entity.Property(o => o.Bairro)
-                    .HasColumnName("BAIRRO")
-                    .HasMaxLength(100)
-                    .IsRequired();
-
-                entity.Property(o => o.Cep)
-                    .HasColumnName("CEP")
-                    .HasMaxLength(9);
-
-                entity.Property(o => o.Confirmacoes)
-                    .HasColumnName("CONFIRMACOES")
-                    .HasColumnType("NUMBER(10)")
-                    .IsRequired();
-
-                entity.Property(o => o.ValidadaComunidade)
-                    .HasColumnName("VALIDADA_COMUNIDADE")
+                entity.Property(o => o.FlAnonimo)
+                    .HasColumnName("FL_ANONIMO")
                     .HasMaxLength(1)
+                    .IsFixedLength()
+                    .HasDefaultValue("N")
                     .IsRequired();
 
-                entity.Property(o => o.CategoriaSugeridaIa)
-                    .HasColumnName("CATEGORIA_SUGERIDA_IA")
-                    .HasMaxLength(60);
-
-                entity.Property(o => o.ConfiancaIa)
-                    .HasColumnName("CONFIANCA_IA")
-                    .HasColumnType("NUMBER(4,3)");
-
-                entity.Property(o => o.CriadaEm)
-                    .HasColumnName("CRIADA_EM")
+                entity.Property(o => o.Status)
+                    .HasColumnName("STATUS")
+                    .HasMaxLength(12)
+                    .HasDefaultValue("ABERTA")
                     .IsRequired();
 
-                entity.Property(o => o.AtualizadaEm)
-                    .HasColumnName("ATUALIZADA_EM");
+                entity.Property(o => o.NumCiclo)
+                    .HasColumnName("NUM_CICLO")
+                    .HasColumnType("NUMBER(10)")
+                    .HasDefaultValue(1)
+                    .IsRequired();
 
-                entity.Property(o => o.ResolvidaEm)
-                    .HasColumnName("RESOLVIDA_EM");
+                entity.Property(o => o.FlExcluida)
+                    .HasColumnName("FL_EXCLUIDA")
+                    .HasMaxLength(1)
+                    .IsFixedLength()
+                    .HasDefaultValue("N")
+                    .IsRequired();
 
-                entity.Property(o => o.SlaLimite)
-                    .HasColumnName("SLA_LIMITE");
+                entity.Property(o => o.IdAutorTransicao)
+                    .HasColumnName("ID_AUTOR_TRANSICAO")
+                    .HasColumnType("NUMBER(19)");
+
+                entity.Property(o => o.DtCriacao)
+                    .HasColumnName("DT_CRIACAO")
+                    .IsRequired();
+
+                entity.Property(o => o.DtAtualizacao)
+                    .HasColumnName("DT_ATUALIZACAO")
+                    .IsRequired();
 
                 entity.HasOne(o => o.Usuario)
                     .WithMany(u => u.Ocorrencias)
@@ -276,48 +229,127 @@ namespace BairroVivo.Infrastructure.Data
                 entity.HasOne(o => o.Categoria)
                     .WithMany(c => c.Ocorrencias)
                     .HasForeignKey(o => o.IdCategoria)
-                    .HasConstraintName("FK_OCORRENCIA_CATEGORIA")
+                    .HasConstraintName("FK_OCORRENCIA_CATEG")
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(o => o.Municipio)
                     .WithMany(m => m.Ocorrencias)
                     .HasForeignKey(o => o.IdMunicipio)
-                    .HasConstraintName("FK_OCORRENCIA_MUNICIPIO")
+                    .HasConstraintName("FK_OCORRENCIA_MUNIC")
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(o => o.AutorTransicao)
+                    .WithMany()
+                    .HasForeignKey(o => o.IdAutorTransicao)
+                    .HasConstraintName("FK_OCORRENCIA_AUTOR_ST")
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // TB_ATUALIZACAO
+            modelBuilder.Entity<AtualizacaoOcorrenciaEntity>(entity =>
+            {
+                entity.ToTable("TB_ATUALIZACAO");
+                entity.HasKey(a => a.IdAtualizacao).HasName("PK_ATUALIZACAO");
+
+                entity.Property(a => a.IdAtualizacao)
+                    .HasColumnName("ID_ATUALIZACAO")
+                    .HasColumnType("NUMBER(19)")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(a => a.IdOcorrencia)
+                    .HasColumnName("ID_OCORRENCIA")
+                    .HasColumnType("NUMBER(19)")
+                    .IsRequired();
+
+                entity.Property(a => a.IdUsuario)
+                    .HasColumnName("ID_USUARIO")
+                    .HasColumnType("NUMBER(19)")
+                    .IsRequired();
+
+                entity.Property(a => a.Tipo)
+                    .HasColumnName("TIPO")
+                    .HasMaxLength(12)
+                    .IsRequired();
+
+                entity.Property(a => a.Texto)
+                    .HasColumnName("TEXTO")
+                    .HasColumnType("CLOB");
+
+                entity.Property(a => a.FlAnonimo)
+                    .HasColumnName("FL_ANONIMO")
+                    .HasMaxLength(1)
+                    .IsFixedLength()
+                    .HasDefaultValue("N")
+                    .IsRequired();
+
+                entity.Property(a => a.DtCriacao)
+                    .HasColumnName("DT_CRIACAO")
+                    .IsRequired();
+
+                entity.HasOne(a => a.Ocorrencia)
+                    .WithMany(o => o.Atualizacoes)
+                    .HasForeignKey(a => a.IdOcorrencia)
+                    .HasConstraintName("FK_ATUALIZACAO_OCORR")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(a => a.Usuario)
+                    .WithMany(u => u.Atualizacoes)
+                    .HasForeignKey(a => a.IdUsuario)
+                    .HasConstraintName("FK_ATUALIZACAO_AUTOR")
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // TB_MIDIA
             modelBuilder.Entity<MidiaOcorrenciaEntity>(entity =>
             {
-                entity.ToTable("TB_MIDIA_OCORRENCIA");
-                entity.HasKey(m => m.IdMidia).HasName("PK_TB_MIDIA_OCORRENCIA");
+                entity.ToTable("TB_MIDIA");
+                entity.HasKey(m => m.IdMidia).HasName("PK_MIDIA");
 
                 entity.Property(m => m.IdMidia)
                     .HasColumnName("ID_MIDIA")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .ValueGeneratedOnAdd();
 
                 entity.Property(m => m.IdOcorrencia)
                     .HasColumnName("ID_OCORRENCIA")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .IsRequired();
 
-                entity.Property(m => m.UrlMidia)
-                    .HasColumnName("URL_MIDIA")
+                entity.Property(m => m.IdAtualizacao)
+                    .HasColumnName("ID_ATUALIZACAO")
+                    .HasColumnType("NUMBER(19)");
+
+                entity.Property(m => m.IdUsuario)
+                    .HasColumnName("ID_USUARIO")
+                    .HasColumnType("NUMBER(19)")
+                    .IsRequired();
+
+                entity.Property(m => m.Provedor)
+                    .HasColumnName("PROVEDOR")
+                    .HasMaxLength(40)
+                    .IsRequired();
+
+                entity.Property(m => m.ChaveStorage)
+                    .HasColumnName("CHAVE_STORAGE")
                     .HasMaxLength(500)
                     .IsRequired();
 
-                entity.Property(m => m.TipoMidia)
-                    .HasColumnName("TIPO_MIDIA")
-                    .HasMaxLength(20)
+                entity.Property(m => m.UrlExibicao)
+                    .HasColumnName("URL_EXIBICAO")
+                    .HasMaxLength(1000);
+
+                entity.Property(m => m.MimeType)
+                    .HasColumnName("MIME_TYPE")
+                    .HasMaxLength(60)
                     .IsRequired();
 
-                entity.Property(m => m.Principal)
-                    .HasColumnName("PRINCIPAL")
-                    .HasMaxLength(1)
+                entity.Property(m => m.TamanhoBytes)
+                    .HasColumnName("TAMANHO_BYTES")
+                    .HasColumnType("NUMBER(12)")
                     .IsRequired();
 
-                entity.Property(m => m.CriadaEm)
-                    .HasColumnName("CRIADA_EM")
+                entity.Property(m => m.DtCriacao)
+                    .HasColumnName("DT_CRIACAO")
                     .IsRequired();
 
                 entity.HasOne(m => m.Ocorrencia)
@@ -325,179 +357,162 @@ namespace BairroVivo.Infrastructure.Data
                     .HasForeignKey(m => m.IdOcorrencia)
                     .HasConstraintName("FK_MIDIA_OCORRENCIA")
                     .OnDelete(DeleteBehavior.Cascade);
-            });
 
-            modelBuilder.Entity<AtualizacaoOcorrenciaEntity>(entity =>
-            {
-                entity.ToTable("TB_ATUALIZACAO_OCORRENCIA");
-                entity.HasKey(a => a.IdAtualizacao).HasName("PK_TB_ATUALIZACAO_OCORRENCIA");
-
-                entity.Property(a => a.IdAtualizacao)
-                    .HasColumnName("ID_ATUALIZACAO")
-                    .HasColumnType("NUMBER(10)")
-                    .ValueGeneratedOnAdd();
-
-                entity.Property(a => a.IdOcorrencia)
-                    .HasColumnName("ID_OCORRENCIA")
-                    .HasColumnType("NUMBER(10)")
-                    .IsRequired();
-
-                entity.Property(a => a.IdUsuario)
-                    .HasColumnName("ID_USUARIO")
-                    .HasColumnType("NUMBER(10)")
-                    .IsRequired();
-
-                entity.Property(a => a.Tipo)
-                    .HasColumnName("TIPO")
-                    .HasMaxLength(25)
-                    .IsRequired();
-
-                entity.Property(a => a.Comentario)
-                    .HasColumnName("COMENTARIO")
-                    .HasMaxLength(1000);
-
-                entity.Property(a => a.UrlFotoEvidencia)
-                    .HasColumnName("URL_FOTO_EVIDENCIA")
-                    .HasMaxLength(500);
-
-                entity.Property(a => a.Latitude)
-                    .HasColumnName("LATITUDE")
-                    .HasColumnType("NUMBER(10,7)");
-
-                entity.Property(a => a.Longitude)
-                    .HasColumnName("LONGITUDE")
-                    .HasColumnType("NUMBER(10,7)");
-
-                entity.Property(a => a.CriadaEm)
-                    .HasColumnName("CRIADA_EM")
-                    .IsRequired();
-
-                entity.HasOne(a => a.Ocorrencia)
-                    .WithMany(o => o.Atualizacoes)
-                    .HasForeignKey(a => a.IdOcorrencia)
-                    .HasConstraintName("FK_ATUALIZACAO_OCORRENCIA")
+                entity.HasOne(m => m.Atualizacao)
+                    .WithMany(a => a.Midias)
+                    .HasForeignKey(m => m.IdAtualizacao)
+                    .HasConstraintName("FK_MIDIA_ATUALIZACAO")
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(a => a.Usuario)
-                    .WithMany(u => u.Atualizacoes)
-                    .HasForeignKey(a => a.IdUsuario)
-                    .HasConstraintName("FK_ATUALIZACAO_USUARIO")
+                entity.HasOne(m => m.Usuario)
+                    .WithMany()
+                    .HasForeignKey(m => m.IdUsuario)
+                    .HasConstraintName("FK_MIDIA_USUARIO")
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // TB_VOTO_SITUACAO
+            modelBuilder.Entity<VotoSituacaoEntity>(entity =>
+            {
+                entity.ToTable("TB_VOTO_SITUACAO");
+                entity.HasKey(v => v.IdVoto).HasName("PK_VOTO_SITUACAO");
+
+                entity.Property(v => v.IdVoto)
+                    .HasColumnName("ID_VOTO")
+                    .HasColumnType("NUMBER(19)")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(v => v.IdOcorrencia)
+                    .HasColumnName("ID_OCORRENCIA")
+                    .HasColumnType("NUMBER(19)")
+                    .IsRequired();
+
+                entity.Property(v => v.IdAtualizacao)
+                    .HasColumnName("ID_ATUALIZACAO")
+                    .HasColumnType("NUMBER(19)")
+                    .IsRequired();
+
+                entity.Property(v => v.IdUsuario)
+                    .HasColumnName("ID_USUARIO")
+                    .HasColumnType("NUMBER(19)")
+                    .IsRequired();
+
+                entity.Property(v => v.NumCiclo)
+                    .HasColumnName("NUM_CICLO")
+                    .HasColumnType("NUMBER(10)")
+                    .IsRequired();
+
+                entity.Property(v => v.TipoVoto)
+                    .HasColumnName("TIPO_VOTO")
+                    .HasMaxLength(12)
+                    .IsRequired();
+
+                entity.Property(v => v.DtVoto)
+                    .HasColumnName("DT_VOTO")
+                    .IsRequired();
+
+                entity.HasOne(v => v.Ocorrencia)
+                    .WithMany(o => o.Votos)
+                    .HasForeignKey(v => v.IdOcorrencia)
+                    .HasConstraintName("FK_VOTO_OCORRENCIA")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(v => v.Atualizacao)
+                    .WithOne(a => a.Voto)
+                    .HasForeignKey<VotoSituacaoEntity>(v => v.IdAtualizacao)
+                    .HasConstraintName("FK_VOTO_ATUALIZACAO")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(v => v.Usuario)
+                    .WithMany()
+                    .HasForeignKey(v => v.IdUsuario)
+                    .HasConstraintName("FK_VOTO_USUARIO")
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // TB_HISTORICO_STATUS
             modelBuilder.Entity<HistoricoStatusOcorrenciaEntity>(entity =>
             {
-                entity.ToTable("TB_HISTORICO_STATUS_OCORRENCIA");
-                entity.HasKey(h => h.IdHistorico).HasName("PK_TB_HISTORICO_STATUS");
+                entity.ToTable("TB_HISTORICO_STATUS");
+                entity.HasKey(h => h.IdHistorico).HasName("PK_HIST_STATUS");
 
                 entity.Property(h => h.IdHistorico)
                     .HasColumnName("ID_HISTORICO")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .ValueGeneratedOnAdd();
 
                 entity.Property(h => h.IdOcorrencia)
                     .HasColumnName("ID_OCORRENCIA")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .IsRequired();
 
-                entity.Property(h => h.IdUsuarioResponsavel)
-                    .HasColumnName("ID_USUARIO_RESPONSAVEL")
-                    .HasColumnType("NUMBER(10)");
+                entity.Property(h => h.IdUsuario)
+                    .HasColumnName("ID_USUARIO")
+                    .HasColumnType("NUMBER(19)");
+
+                entity.Property(h => h.Operacao)
+                    .HasColumnName("OPERACAO")
+                    .HasMaxLength(10)
+                    .IsRequired();
 
                 entity.Property(h => h.StatusAnterior)
                     .HasColumnName("STATUS_ANTERIOR")
-                    .HasMaxLength(20);
+                    .HasMaxLength(12);
 
                 entity.Property(h => h.StatusNovo)
                     .HasColumnName("STATUS_NOVO")
-                    .HasMaxLength(20)
+                    .HasMaxLength(12)
                     .IsRequired();
 
-                entity.Property(h => h.Observacao)
-                    .HasColumnName("OBSERVACAO")
-                    .HasMaxLength(500);
+                entity.Property(h => h.CicloAnterior)
+                    .HasColumnName("CICLO_ANTERIOR")
+                    .HasColumnType("NUMBER(10)");
 
-                entity.Property(h => h.AlteradoEm)
-                    .HasColumnName("ALTERADO_EM")
+                entity.Property(h => h.CicloNovo)
+                    .HasColumnName("CICLO_NOVO")
+                    .HasColumnType("NUMBER(10)")
+                    .IsRequired();
+
+                entity.Property(h => h.DtEvento)
+                    .HasColumnName("DT_EVENTO")
                     .IsRequired();
 
                 entity.HasOne(h => h.Ocorrencia)
                     .WithMany(o => o.HistoricoStatus)
                     .HasForeignKey(h => h.IdOcorrencia)
-                    .HasConstraintName("FK_HIST_STATUS_OCORRENCIA")
+                    .HasConstraintName("FK_HIST_OCORR")
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(h => h.UsuarioResponsavel)
+                entity.HasOne(h => h.Usuario)
                     .WithMany()
-                    .HasForeignKey(h => h.IdUsuarioResponsavel)
-                    .HasConstraintName("FK_HIST_STATUS_USUARIO")
+                    .HasForeignKey(h => h.IdUsuario)
+                    .HasConstraintName("FK_HIST_USUARIO")
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
-            modelBuilder.Entity<AuditoriaOcorrenciaEntity>(entity =>
-            {
-                entity.ToTable("TB_AUDITORIA_OCORRENCIA");
-                entity.HasKey(a => a.IdAuditoria).HasName("PK_TB_AUDITORIA_OCORRENCIA");
-
-                entity.Property(a => a.IdAuditoria)
-                    .HasColumnName("ID_AUDITORIA")
-                    .HasColumnType("NUMBER(10)")
-                    .ValueGeneratedOnAdd();
-
-                entity.Property(a => a.IdOcorrencia)
-                    .HasColumnName("ID_OCORRENCIA")
-                    .HasColumnType("NUMBER(10)")
-                    .IsRequired();
-
-                entity.Property(a => a.Operacao)
-                    .HasColumnName("OPERACAO")
-                    .HasMaxLength(10)
-                    .IsRequired();
-
-                entity.Property(a => a.UsuarioBanco)
-                    .HasColumnName("USUARIO_BANCO")
-                    .HasMaxLength(60);
-
-                entity.Property(a => a.StatusAnterior)
-                    .HasColumnName("STATUS_ANTERIOR")
-                    .HasMaxLength(20);
-
-                entity.Property(a => a.StatusNovo)
-                    .HasColumnName("STATUS_NOVO")
-                    .HasMaxLength(20);
-
-                entity.Property(a => a.DadosAnteriores)
-                    .HasColumnName("DADOS_ANTERIORES");
-
-                entity.Property(a => a.DadosNovos)
-                    .HasColumnName("DADOS_NOVOS");
-
-                entity.Property(a => a.DataOperacao)
-                    .HasColumnName("DATA_OPERACAO")
-                    .IsRequired();
-            });
-
+            // TB_REQUISICAO_IDEMPOTENTE
             modelBuilder.Entity<RequisicaoIdempotenteEntity>(entity =>
             {
                 entity.ToTable("TB_REQUISICAO_IDEMPOTENTE");
-                entity.HasKey(r => r.IdRequisicao).HasName("PK_TB_REQ_IDEMPOTENTE");
+                entity.HasKey(r => r.IdRequisicao).HasName("PK_REQ_IDEMPOTENTE");
 
                 entity.Property(r => r.IdRequisicao)
                     .HasColumnName("ID_REQUISICAO")
-                    .HasColumnType("NUMBER(10)")
+                    .HasColumnType("NUMBER(19)")
                     .ValueGeneratedOnAdd();
-
-                entity.Property(r => r.ChaveIdempotencia)
-                    .HasColumnName("CHAVE_IDEMPOTENCIA")
-                    .HasMaxLength(100)
-                    .IsRequired();
 
                 entity.Property(r => r.IdUsuario)
                     .HasColumnName("ID_USUARIO")
-                    .HasColumnType("NUMBER(10)");
+                    .HasColumnType("NUMBER(19)")
+                    .IsRequired();
 
-                entity.Property(r => r.Endpoint)
-                    .HasColumnName("ENDPOINT")
+                entity.Property(r => r.Chave)
+                    .HasColumnName("CHAVE")
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(r => r.Rota)
+                    .HasColumnName("ROTA")
                     .HasMaxLength(200)
                     .IsRequired();
 
@@ -506,97 +521,49 @@ namespace BairroVivo.Infrastructure.Data
                     .HasMaxLength(10)
                     .IsRequired();
 
-                entity.Property(r => r.StatusHttpResposta)
-                    .HasColumnName("STATUS_HTTP_RESPOSTA")
-                    .HasColumnType("NUMBER(3)")
+                entity.Property(r => r.HashCorpo)
+                    .HasColumnName("HASH_CORPO")
+                    .HasMaxLength(64)
                     .IsRequired();
 
-                entity.Property(r => r.CorpoResposta)
-                    .HasColumnName("CORPO_RESPOSTA");
+                entity.Property(r => r.IdRecurso)
+                    .HasColumnName("ID_RECURSO")
+                    .HasColumnType("NUMBER(19)");
 
-                entity.Property(r => r.CriadaEm)
-                    .HasColumnName("CRIADA_EM")
+                entity.Property(r => r.DtCriacao)
+                    .HasColumnName("DT_CRIACAO")
                     .IsRequired();
 
-                entity.Property(r => r.ExpiraEm)
-                    .HasColumnName("EXPIRA_EM")
-                    .IsRequired();
+                entity.HasOne(r => r.Usuario)
+                    .WithMany()
+                    .HasForeignKey(r => r.IdUsuario)
+                    .HasConstraintName("FK_REQ_USUARIO")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(r => new { r.IdUsuario, r.Chave, r.Rota })
+                    .IsUnique()
+                    .HasDatabaseName("UX_REQ_IDEMPOTENTE");
             });
 
-            modelBuilder.Entity<RelatorioBairroEntity>(entity =>
+            // VW_RELATORIO_OCORRENCIAS
+            modelBuilder.Entity<RelatorioOcorrenciaEntity>(entity =>
             {
-                entity.ToTable("TB_RELATORIO_BAIRRO");
-                entity.HasKey(r => r.IdRelatorio).HasName("PK_TB_RELATORIO_BAIRRO");
+                entity.ToView("VW_RELATORIO_OCORRENCIAS");
+                entity.HasKey(r => new { r.IdMunicipio, r.IdCategoria, r.Status });
 
-                entity.Property(r => r.IdRelatorio)
-                    .HasColumnName("ID_RELATORIO")
-                    .HasColumnType("NUMBER(10)")
-                    .ValueGeneratedOnAdd();
-
-                entity.Property(r => r.IdMunicipio)
-                    .HasColumnName("ID_MUNICIPIO")
-                    .HasColumnType("NUMBER(10)")
-                    .IsRequired();
-
-                entity.Property(r => r.Bairro)
-                    .HasColumnName("BAIRRO")
-                    .HasMaxLength(100)
-                    .IsRequired();
-
-                entity.Property(r => r.PeriodoRef)
-                    .HasColumnName("PERIODO_REF")
-                    .HasMaxLength(20)
-                    .IsRequired();
-
-                entity.Property(r => r.TotalOcorrencias)
-                    .HasColumnName("TOTAL_OCORRENCIAS")
-                    .HasColumnType("NUMBER(10)");
-
-                entity.Property(r => r.TotalResolvidas)
-                    .HasColumnName("TOTAL_RESOLVIDAS")
-                    .HasColumnType("NUMBER(10)");
-
-                entity.Property(r => r.ResumoIa)
-                    .HasColumnName("RESUMO_IA")
-                    .IsRequired();
-
-                entity.Property(r => r.ModeloIa)
-                    .HasColumnName("MODELO_IA")
-                    .HasMaxLength(60);
-
-                entity.Property(r => r.GeradoEm)
-                    .HasColumnName("GERADO_EM")
-                    .IsRequired();
+                entity.Property(r => r.IdMunicipio).HasColumnName("ID_MUNICIPIO");
+                entity.Property(r => r.IdCategoria).HasColumnName("ID_CATEGORIA");
+                entity.Property(r => r.Status).HasColumnName("STATUS");
+                entity.Property(r => r.TotalOcorrencias).HasColumnName("TOTAL_OCORRENCIAS");
 
                 entity.HasOne(r => r.Municipio)
-                    .WithMany(m => m.Relatorios)
-                    .HasForeignKey(r => r.IdMunicipio)
-                    .HasConstraintName("FK_RELATORIO_MUNICIPIO")
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .WithMany()
+                    .HasForeignKey(r => r.IdMunicipio);
+
+                entity.HasOne(r => r.Categoria)
+                    .WithMany()
+                    .HasForeignKey(r => r.IdCategoria);
             });
-
-            if (!Database.IsRelational())
-            {
-                foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-                {
-                    var chavePrimaria = entityType.FindPrimaryKey();
-                    if (chavePrimaria is { Properties.Count: 1 } &&
-                        chavePrimaria.Properties[0].ClrType == typeof(decimal))
-                    {
-                        chavePrimaria.Properties[0]
-                            .SetValueGeneratorFactory((_, _) => new DecimalInMemoryValueGenerator());
-                    }
-                }
-            }
-        }
-
-        private sealed class DecimalInMemoryValueGenerator
-            : Microsoft.EntityFrameworkCore.ValueGeneration.ValueGenerator<decimal>
-        {
-            private static long _sequencial = 100;
-            public override bool GeneratesTemporaryValues => false;
-            public override decimal Next(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry) =>
-                Interlocked.Increment(ref _sequencial);
         }
     }
 }

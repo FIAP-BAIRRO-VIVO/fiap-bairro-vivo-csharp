@@ -5,9 +5,9 @@ namespace BairroVivo.Application.Interfaces
     public interface ICategoriaUseCase
     {
         IEnumerable<CategoriaResponseDto> ObterTodas();
-        CategoriaResponseDto? ObterPorId(decimal idCategoria);
+        CategoriaResponseDto? ObterPorId(long idCategoria);
         CategoriaResponseDto Cadastrar(CategoriaRequestDto dto);
-        bool Atualizar(decimal idCategoria, CategoriaRequestDto dto);
-        bool Remover(decimal idCategoria);
+        bool Atualizar(long idCategoria, CategoriaRequestDto dto);
+        bool Remover(long idCategoria);
     }
 }

@@ -1,8 +1,10 @@
 using BairroVivo.API.Application.Dtos;
 using BairroVivo.API.Domain.Interfaces;
 using BairroVivo.Application.Dtos.Atualizacoes;
+using BairroVivo.Application.Dtos.Ocorrencias;
 using BairroVivo.Application.Interfaces;
 using BairroVivo.Application.Mappers;
+using BairroVivo.Domain.Entities;
 using BairroVivo.Domain.Rules;
 
 namespace BairroVivo.Application.UseCases
@@ -11,29 +13,32 @@ namespace BairroVivo.Application.UseCases
     {
         private readonly IAtualizacaoRepository _atualizacaoRepository;
         private readonly IOcorrenciaRepository _ocorrenciaRepository;
+        private readonly IIntegracaoOracleRepository _integracaoOracle;
 
         public AtualizacaoUseCase(
             IAtualizacaoRepository atualizacaoRepository,
-            IOcorrenciaRepository ocorrenciaRepository)
+            IOcorrenciaRepository ocorrenciaRepository,
+            IIntegracaoOracleRepository integracaoOracle)
         {
             _atualizacaoRepository = atualizacaoRepository;
             _ocorrenciaRepository = ocorrenciaRepository;
+            _integracaoOracle = integracaoOracle;
         }
 
-        public IEnumerable<AtualizacaoResponseDto> ObterPorOcorrencia(decimal idOcorrencia)
+        public IEnumerable<AtualizacaoResponseDto> ObterPorOcorrencia(long idOcorrencia)
         {
             if (_ocorrenciaRepository.ObterPorId(idOcorrencia) == null)
-                throw new KeyNotFoundException("Ocorrência não encontrada.");
+                throw new KeyNotFoundException("Ocorrência não encontrada ou excluída.");
 
             return _atualizacaoRepository.ObterPorOcorrencia(idOcorrencia)
                 .Select(a => a.ToResponseDto());
         }
 
         public PageResponseDto<AtualizacaoResponseDto> ObterPorOcorrenciaPaginado(
-            decimal idOcorrencia, int pagina, int tamanho)
+            long idOcorrencia, int pagina, int tamanho)
         {
             if (_ocorrenciaRepository.ObterPorId(idOcorrencia) == null)
-                throw new KeyNotFoundException("Ocorrência não encontrada.");
+                throw new KeyNotFoundException("Ocorrência não encontrada ou excluída.");
 
             pagina = Math.Max(1, pagina);
             tamanho = Math.Clamp(tamanho, 1, 50);
@@ -51,52 +56,99 @@ namespace BairroVivo.Application.UseCases
             };
         }
 
-        public AtualizacaoResponseDto? ObterPorId(decimal idAtualizacao)
+        public AtualizacaoResponseDto? ObterPorId(long idAtualizacao)
         {
             var atualizacao = _atualizacaoRepository.ObterPorId(idAtualizacao);
             return atualizacao?.ToResponseDto();
         }
 
-        public AtualizacaoResponseDto Registrar(decimal idOcorrencia, decimal idUsuario, AtualizacaoRequestDto dto)
+        public async Task<AtualizacaoResponseDto> RegistrarAsync(long idOcorrencia, long idUsuario, AtualizacaoRequestDto dto)
+        {
+            var ocorrencia = _ocorrenciaRepository.ObterPorId(idOcorrencia);
+            if (ocorrencia == null)
+                throw new KeyNotFoundException("Ocorrência não encontrada ou excluída.");
+
+            if (!_ocorrenciaRepository.ExisteUsuario(idUsuario))
+                throw new KeyNotFoundException("Usuário não encontrado ou inativo.");
+
+            var tipo = AtualizacaoRules.ValidarTipo(dto.Tipo);
+            var flAnonimo = dto.AnonimoPublico ? "S" : "N";
+            var texto = dto.Texto ?? dto.Comentario;
+
+            // Executa a procedure oficial PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO no Oracle
+            // (ou simulação fiel em memória durante os testes unitários)
+            var idCriado = await _integracaoOracle.ExecutarRegistrarAtualizacaoAsync(
+                idOcorrencia, idUsuario, tipo, texto, flAnonimo);
+
+            // Consulta o estado real e atualizado da ocorrência e da atualização após a procedure
+            var ocorrenciaAtualizada = _ocorrenciaRepository.ObterPorId(idOcorrencia) ?? ocorrencia;
+            var atualizacaoCriada = _atualizacaoRepository.ObterPorId(idCriado);
+
+            var confirmacoesNoCiclo = 0;
+            if (tipo == "RESOLVIDO" || tipo == "PERSISTE")
+            {
+                confirmacoesNoCiclo = await _integracaoOracle.ContarVotosAtivosAsync(idOcorrencia, tipo);
+            }
+
+            var foiVoto = atualizacaoCriada?.Voto != null ||
+                          AtualizacaoRules.ContaComoVoto(ocorrencia.Status, tipo);
+
+            var dtoResposta = atualizacaoCriada != null
+                ? atualizacaoCriada.ToResponseDto()
+                : new AtualizacaoResponseDto
+                {
+                    Id = idCriado.ToString(),
+                    IdOcorrencia = idOcorrencia.ToString(),
+                    Tipo = tipo,
+                    Texto = texto,
+                    AutorExibicao = dto.AnonimoPublico ? "Cidadao anonimo" : "Cidadao",
+                    AnonimoPublico = dto.AnonimoPublico,
+                    DtCriacao = DateTime.UtcNow
+                };
+
+            dtoResposta.ContabilizadaComoVoto = foiVoto;
+            dtoResposta.StatusAtual = ocorrenciaAtualizada.Status;
+            dtoResposta.NumeroCiclo = ocorrenciaAtualizada.NumCiclo;
+            dtoResposta.ConfirmacoesNoCiclo = confirmacoesNoCiclo;
+
+            return dtoResposta;
+        }
+
+        public MidiaOcorrenciaResponseDto AdicionarMidia(long idOcorrencia, long idAtualizacao, long idUsuario, MidiaOcorrenciaRequestDto dto)
         {
             var ocorrencia = _ocorrenciaRepository.ObterPorId(idOcorrencia);
             if (ocorrencia == null)
                 throw new KeyNotFoundException("Ocorrência não encontrada.");
 
-            if (!_ocorrenciaRepository.ExisteUsuario(idUsuario))
-                throw new KeyNotFoundException("Usuário não encontrado.");
+            var atualizacao = _atualizacaoRepository.ObterPorId(idAtualizacao);
+            if (atualizacao == null || atualizacao.IdOcorrencia != idOcorrencia)
+                throw new KeyNotFoundException("Atualização não encontrada para esta ocorrência.");
 
-            dto.Tipo = AtualizacaoRules.ValidarTipo(dto.Tipo);
+            if (atualizacao.IdUsuario != idUsuario)
+                throw new UnauthorizedAccessException("Somente o autor da atualização pode anexar foto a ela.");
 
-            if ((dto.Tipo == "CONFIRMACAO" || dto.Tipo == "JA_RESOLVIDO") &&
-                _atualizacaoRepository.JaVotou(idOcorrencia, idUsuario, dto.Tipo))
+            var chave = !string.IsNullOrWhiteSpace(dto.ChaveStorage) ? dto.ChaveStorage : dto.UrlExibicao;
+            if (string.IsNullOrWhiteSpace(chave))
+                throw new ArgumentException("A chave de storage ou URL da mídia é obrigatória.");
+
+            var mime = (dto.MimeType ?? "image/jpeg").Trim().ToLowerInvariant();
+            if (mime != "image/jpeg" && mime != "image/png" && mime != "image/webp")
+                throw new ArgumentException("Formato de mídia não suportado. Utilize image/jpeg, image/png ou image/webp.");
+
+            var salva = _atualizacaoRepository.AdicionarMidia(new MidiaOcorrenciaEntity
             {
-                throw new InvalidOperationException(
-                    $"O cidadão já registrou '{dto.Tipo}' para esta ocorrência.");
-            }
+                IdOcorrencia = idOcorrencia,
+                IdAtualizacao = idAtualizacao,
+                IdUsuario = idUsuario,
+                Provedor = !string.IsNullOrWhiteSpace(dto.Provedor) ? dto.Provedor.Trim() : "LOCAL",
+                ChaveStorage = chave.Trim(),
+                UrlExibicao = dto.UrlExibicao?.Trim(),
+                MimeType = mime,
+                TamanhoBytes = dto.TamanhoBytes > 0 ? dto.TamanhoBytes : 1024,
+                DtCriacao = DateTime.UtcNow
+            });
 
-            var entity = dto.ToEntity(idOcorrencia, idUsuario);
-            var salva = _atualizacaoRepository.Registrar(entity);
-
-            if (dto.Tipo == "CONFIRMACAO")
-            {
-                ocorrencia.Confirmacoes += 1;
-                var (validada, novaUrgencia) = AtualizacaoRules.AvaliarValidacaoComunitaria(
-                    ocorrencia.Confirmacoes, ocorrencia.Urgencia);
-                ocorrencia.ValidadaComunidade = validada;
-                ocorrencia.Urgencia = novaUrgencia;
-                ocorrencia.AtualizadaEm = DateTime.Now;
-                _ocorrenciaRepository.Atualizar(ocorrencia);
-            }
-            else if (dto.Tipo == "JA_RESOLVIDO" && ocorrencia.Status != "RESOLVIDA")
-            {
-                ocorrencia.Status = "EM_ANALISE";
-                ocorrencia.AtualizadaEm = DateTime.Now;
-                _ocorrenciaRepository.Atualizar(ocorrencia);
-            }
-
-            var completa = _atualizacaoRepository.ObterPorId(salva.IdAtualizacao) ?? salva;
-            return completa.ToResponseDto();
+            return salva.ToResponseDto();
         }
     }
 }

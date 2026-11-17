@@ -2,26 +2,26 @@ namespace BairroVivo.Domain.Entities
 {
     public class AtualizacaoOcorrenciaEntity
     {
-        public decimal IdAtualizacao { get; set; }
+        public long IdAtualizacao { get; set; }
 
-        public decimal IdOcorrencia { get; set; }
+        public long IdOcorrencia { get; set; }
 
-        public decimal IdUsuario { get; set; }
+        public long IdUsuario { get; set; }
 
-        public string Tipo { get; set; } = "CONFIRMACAO";
+        public string Tipo { get; set; } = "COMENTARIO"; // COMENTARIO, PERSISTE, RESOLVIDO
 
-        public string? Comentario { get; set; }
+        public string? Texto { get; set; }
 
-        public string? UrlFotoEvidencia { get; set; }
+        public string FlAnonimo { get; set; } = "N";
 
-        public decimal? Latitude { get; set; }
-
-        public decimal? Longitude { get; set; }
-
-        public DateTime CriadaEm { get; set; }
+        public DateTime DtCriacao { get; set; } = DateTime.UtcNow;
 
         public OcorrenciaEntity Ocorrencia { get; set; } = null!;
 
         public UsuarioEntity Usuario { get; set; } = null!;
+
+        public ICollection<MidiaOcorrenciaEntity> Midias { get; set; } = new List<MidiaOcorrenciaEntity>();
+
+        public VotoSituacaoEntity? Voto { get; set; }
     }
 }

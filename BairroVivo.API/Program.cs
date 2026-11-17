@@ -173,7 +173,7 @@ builder.Services.AddScoped<IOcorrenciaAccessService, OcorrenciaAccessService>();
 builder.Services.AddScoped<IAtualizacaoRepository, AtualizacaoRepository>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 builder.Services.AddScoped<IMunicipioRepository, MunicipioRepository>();
-builder.Services.AddScoped<IRelatorioBairroRepository, RelatorioBairroRepository>();
+builder.Services.AddScoped<IRelatorioRepository, RelatorioRepository>();
 builder.Services.AddScoped<IIntegracaoOracleRepository, IntegracaoOracleRepository>();
 
 // UseCases
@@ -181,7 +181,7 @@ builder.Services.AddScoped<IOcorrenciaUseCase, OcorrenciaUseCase>();
 builder.Services.AddScoped<IAtualizacaoUseCase, AtualizacaoUseCase>();
 builder.Services.AddScoped<ICategoriaUseCase, CategoriaUseCase>();
 builder.Services.AddScoped<IMunicipioUseCase, MunicipioUseCase>();
-builder.Services.AddScoped<IRelatorioBairroUseCase, RelatorioBairroUseCase>();
+builder.Services.AddScoped<IRelatorioUseCase, RelatorioUseCase>();
 builder.Services.AddScoped<IIntegracaoOracleUseCase, IntegracaoOracleUseCase>();
 
 // Servicos externos e HealthChecks
@@ -213,6 +213,12 @@ app.UseExceptionHandler(exceptionApp =>
         context.Response.StatusCode = status;
         await context.Response.WriteAsJsonAsync(new { mensagem });
     });
+});
+
+app.Use((context, next) =>
+{
+    context.Request.EnableBuffering();
+    return next();
 });
 
 app.UseSerilogRequestLogging();

@@ -24,14 +24,31 @@ namespace BairroVivo.Application.UseCases
         }
 
         public PageResponseDto<OcorrenciaResponseDto> ObterPaginado(
-            int pagina, int tamanho, string? status, string? urgencia,
-            string? bairro, decimal? idCategoria, decimal? idMunicipio, string? ordem)
+            int pagina, int tamanho,
+            decimal? minLat, decimal? maxLat, decimal? minLon, decimal? maxLon,
+            long? idCategoria, long? idMunicipio, string? status, string? ordem)
         {
             pagina = Math.Max(1, pagina);
             tamanho = Math.Clamp(tamanho, 1, 50);
             var deslocamento = (pagina - 1) * tamanho;
+
+            if (!string.IsNullOrWhiteSpace(status))
+                status = OcorrenciaRules.ValidarStatus(status);
+
+            if (minLat.HasValue && maxLat.HasValue)
+            {
+                if (minLat.Value > maxLat.Value)
+                    throw new ArgumentException("minLat não pode ser maior que maxLat.");
+            }
+
+            if (minLon.HasValue && maxLon.HasValue)
+            {
+                if (minLon.Value > maxLon.Value)
+                    throw new ArgumentException("minLon não pode ser maior que maxLon.");
+            }
+
             var (itens, total) = _ocorrenciaRepository
-                .ObterPaginado(deslocamento, tamanho, status, urgencia, bairro, idCategoria, idMunicipio, ordem);
+                .ObterPaginado(deslocamento, tamanho, minLat, maxLat, minLon, maxLon, idCategoria, idMunicipio, status, ordem);
 
             return new PageResponseDto<OcorrenciaResponseDto>
             {
@@ -43,14 +60,18 @@ namespace BairroVivo.Application.UseCases
         }
 
         public PageResponseDto<OcorrenciaResponseDto> ObterPorUsuarioPaginado(
-            decimal idUsuario, int pagina, int tamanho, string? status, string? ordem)
+            long idUsuario, int pagina, int tamanho, string? status, string? ordem)
         {
             if (!_ocorrenciaRepository.ExisteUsuario(idUsuario))
-                throw new KeyNotFoundException("Usuário não encontrado.");
+                throw new KeyNotFoundException("Usuário não encontrado ou inativo.");
 
             pagina = Math.Max(1, pagina);
             tamanho = Math.Clamp(tamanho, 1, 50);
             var deslocamento = (pagina - 1) * tamanho;
+
+            if (!string.IsNullOrWhiteSpace(status))
+                status = OcorrenciaRules.ValidarStatus(status);
+
             var (itens, total) = _ocorrenciaRepository
                 .ObterPorUsuarioPaginado(idUsuario, deslocamento, tamanho, status, ordem);
 
@@ -63,69 +84,65 @@ namespace BairroVivo.Application.UseCases
             };
         }
 
-        public OcorrenciaResponseDto? ObterPorId(decimal idOcorrencia)
+        public OcorrenciaResponseDto? ObterPorId(long idOcorrencia)
         {
             var ocorrencia = _ocorrenciaRepository.ObterPorId(idOcorrencia);
-            if (ocorrencia == null)
-                return null;
-
-            return ocorrencia.ToResponseDto();
+            return ocorrencia?.ToResponseDto();
         }
 
-        public OcorrenciaResponseDto Cadastrar(decimal idUsuario, OcorrenciaRequestDto dto)
+        public OcorrenciaResponseDto Cadastrar(long idUsuario, OcorrenciaRequestDto dto)
         {
             if (!_ocorrenciaRepository.ExisteUsuario(idUsuario))
-                throw new KeyNotFoundException("Usuário não encontrado.");
+                throw new KeyNotFoundException("Usuário não encontrado ou inativo.");
 
-            var categoria = _ocorrenciaRepository.ObterCategoria(dto.IdCategoria);
-            if (categoria == null)
-                throw new ArgumentException("Categoria inválida ou inexistente.");
+            if (!_ocorrenciaRepository.ExisteCategoria(dto.CategoriaId))
+                throw new ArgumentException("Categoria inválida ou inativa.");
 
-            if (!_ocorrenciaRepository.ExisteMunicipio(dto.IdMunicipio))
+            if (!_ocorrenciaRepository.ExisteMunicipio(dto.MunicipioId))
                 throw new ArgumentException("Município inválido ou inexistente.");
 
             dto.Titulo = OcorrenciaRules.ValidarTitulo(dto.Titulo);
             dto.Descricao = OcorrenciaRules.ValidarDescricao(dto.Descricao);
-            dto.Bairro = OcorrenciaRules.ValidarBairro(dto.Bairro);
-            dto.Urgencia = OcorrenciaRules.ValidarUrgencia(dto.Urgencia);
+            dto.EnderecoReferencia = OcorrenciaRules.ValidarEnderecoReferencia(dto.EnderecoReferencia);
             OcorrenciaRules.ValidarCoordenadas(dto.Latitude, dto.Longitude);
 
-            var sequencial = _ocorrenciaRepository.ObterProximoSequencialProtocolo();
-            var protocolo = OcorrenciaRules.GerarProtocolo(DateTime.Now, sequencial);
-
-            var entity = dto.ToEntity(idUsuario, protocolo, categoria.SlaDiasPadrao);
+            var entity = dto.ToEntity(idUsuario);
             var salva = _ocorrenciaRepository.Cadastrar(entity);
 
             _ocorrenciaRepository.RegistrarHistoricoStatus(new HistoricoStatusOcorrenciaEntity
             {
                 IdOcorrencia = salva.IdOcorrencia,
-                IdUsuarioResponsavel = idUsuario,
+                IdUsuario = idUsuario,
+                Operacao = "INSERT",
                 StatusAnterior = null,
                 StatusNovo = "ABERTA",
-                Observacao = "Abertura inicial da ocorrência urbana.",
-                AlteradoEm = DateTime.Now
+                CicloAnterior = null,
+                CicloNovo = 1,
+                DtEvento = DateTime.UtcNow
             });
 
             var completa = _ocorrenciaRepository.ObterPorId(salva.IdOcorrencia);
             return completa!.ToResponseDto();
         }
 
-        public bool Atualizar(decimal idOcorrencia, OcorrenciaRequestDto dto)
+        public bool Atualizar(long idOcorrencia, long idUsuario, OcorrenciaRequestDto dto)
         {
             var ocorrencia = _ocorrenciaRepository.ObterPorId(idOcorrencia);
             if (ocorrencia == null)
                 return false;
 
-            if (!_ocorrenciaRepository.ExisteCategoria(dto.IdCategoria))
-                throw new ArgumentException("Categoria inválida ou inexistente.");
+            if (ocorrencia.IdUsuario != idUsuario)
+                throw new UnauthorizedAccessException("Somente o autor da ocorrência pode editá-la.");
 
-            if (!_ocorrenciaRepository.ExisteMunicipio(dto.IdMunicipio))
+            if (!_ocorrenciaRepository.ExisteCategoria(dto.CategoriaId))
+                throw new ArgumentException("Categoria inválida ou inativa.");
+
+            if (!_ocorrenciaRepository.ExisteMunicipio(dto.MunicipioId))
                 throw new ArgumentException("Município inválido ou inexistente.");
 
             dto.Titulo = OcorrenciaRules.ValidarTitulo(dto.Titulo);
             dto.Descricao = OcorrenciaRules.ValidarDescricao(dto.Descricao);
-            dto.Bairro = OcorrenciaRules.ValidarBairro(dto.Bairro);
-            dto.Urgencia = OcorrenciaRules.ValidarUrgencia(dto.Urgencia);
+            dto.EnderecoReferencia = OcorrenciaRules.ValidarEnderecoReferencia(dto.EnderecoReferencia);
             OcorrenciaRules.ValidarCoordenadas(dto.Latitude, dto.Longitude);
 
             dto.UpdateEntity(ocorrencia);
@@ -133,66 +150,66 @@ namespace BairroVivo.Application.UseCases
             return true;
         }
 
-        public bool AtualizarStatus(decimal idOcorrencia, decimal? idUsuarioResponsavel, OcorrenciaStatusRequestDto dto)
+        public bool Remover(long idOcorrencia, long idUsuario)
         {
             var ocorrencia = _ocorrenciaRepository.ObterPorId(idOcorrencia);
             if (ocorrencia == null)
                 return false;
 
-            var novoStatus = OcorrenciaRules.ValidarStatus(dto.Status);
-            var statusAnterior = ocorrencia.Status;
-
-            ocorrencia.Status = novoStatus;
-            ocorrencia.AtualizadaEm = DateTime.Now;
-            if (novoStatus == "RESOLVIDA")
-                ocorrencia.ResolvidaEm = DateTime.Now;
-
-            _ocorrenciaRepository.Atualizar(ocorrencia);
-            _ocorrenciaRepository.RegistrarHistoricoStatus(new HistoricoStatusOcorrenciaEntity
-            {
-                IdOcorrencia = ocorrencia.IdOcorrencia,
-                IdUsuarioResponsavel = idUsuarioResponsavel,
-                StatusAnterior = statusAnterior,
-                StatusNovo = novoStatus,
-                Observacao = dto.Observacao?.Trim(),
-                AlteradoEm = DateTime.Now
-            });
-
-            return true;
-        }
-
-        public bool Remover(decimal idOcorrencia)
-        {
-            var ocorrencia = _ocorrenciaRepository.ObterPorId(idOcorrencia);
-            if (ocorrencia == null)
-                return false;
+            if (ocorrencia.IdUsuario != idUsuario)
+                throw new UnauthorizedAccessException("Somente o autor da ocorrência pode excluí-la.");
 
             _ocorrenciaRepository.Remover(ocorrencia);
             return true;
         }
 
-        public MidiaOcorrenciaResponseDto AdicionarMidia(decimal idOcorrencia, MidiaOcorrenciaRequestDto dto)
+        public IEnumerable<HistoricoStatusResponseDto> ObterHistorico(long idOcorrencia)
+        {
+            if (_ocorrenciaRepository.ObterPorId(idOcorrencia) == null)
+                throw new KeyNotFoundException("Ocorrência não encontrada.");
+
+            var lista = _ocorrenciaRepository.ObterHistoricoStatus(idOcorrencia);
+            return lista.Select(h => new HistoricoStatusResponseDto
+            {
+                Id = h.IdHistorico.ToString(),
+                IdOcorrencia = h.IdOcorrencia.ToString(),
+                Operacao = h.Operacao,
+                StatusAnterior = h.StatusAnterior,
+                StatusNovo = h.StatusNovo,
+                CicloAnterior = h.CicloAnterior,
+                CicloNovo = h.CicloNovo,
+                DtEvento = h.DtEvento
+            });
+        }
+
+        public MidiaOcorrenciaResponseDto AdicionarMidia(long idOcorrencia, long idUsuario, MidiaOcorrenciaRequestDto dto)
         {
             var ocorrencia = _ocorrenciaRepository.ObterPorId(idOcorrencia);
             if (ocorrencia == null)
                 throw new KeyNotFoundException("Ocorrência não encontrada.");
 
-            if (string.IsNullOrWhiteSpace(dto.UrlMidia))
-                throw new ArgumentException("A URL da mídia é obrigatória.");
+            if (ocorrencia.IdUsuario != idUsuario)
+                throw new UnauthorizedAccessException("Somente o autor original da ocorrência pode anexar fotos diretamente a ela.");
 
-            var tipo = (dto.TipoMidia ?? "FOTO").Trim().ToUpperInvariant();
-            if (tipo != "FOTO" && tipo != "VIDEO")
-                throw new ArgumentException("Tipo de mídia inválido. Utilize FOTO ou VIDEO.");
+            var chave = !string.IsNullOrWhiteSpace(dto.ChaveStorage) ? dto.ChaveStorage : dto.UrlExibicao;
+            if (string.IsNullOrWhiteSpace(chave))
+                throw new ArgumentException("A chave de storage ou URL da mídia é obrigatória.");
 
-            var principal = (dto.Principal ?? "N").Trim().ToUpperInvariant() == "S" ? "S" : "N";
+            var mime = (dto.MimeType ?? "image/jpeg").Trim().ToLowerInvariant();
+            if (mime != "image/jpeg" && mime != "image/png" && mime != "image/webp")
+                throw new ArgumentException("Formato de mídia não suportado. Utilize image/jpeg, image/png ou image/webp.");
 
             var salva = _ocorrenciaRepository.AdicionarMidia(new MidiaOcorrenciaEntity
             {
                 IdOcorrencia = idOcorrencia,
-                UrlMidia = dto.UrlMidia.Trim(),
-                TipoMidia = tipo,
-                Principal = principal,
-                CriadaEm = DateTime.Now
+                IdAtualizacao = null,
+                IdUsuario = idUsuario,
+                Provedor = !string.IsNullOrWhiteSpace(dto.Provedor) ? dto.Provedor.Trim() : "LOCAL",
+                ChaveStorage = chave.Trim(),
+                UrlExibicao = dto.UrlExibicao?.Trim(),
+                MimeType = mime,
+                TamanhoBytes = dto.TamanhoBytes > 0 ? dto.TamanhoBytes : 1024,
+                DtCriacao = DateTime.UtcNow
             });
 
             return salva.ToResponseDto();

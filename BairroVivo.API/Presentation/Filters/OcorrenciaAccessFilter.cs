@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace BairroVivo.API.Presentation.Filters;
 
-// Filtro MVC seguindo o padrao de PetAccessFilter: valida usuario ativo no Oracle e permissoes da ocorrencia.
+// Filtro MVC: valida usuário ativo no Oracle e permissões de autoria da ocorrência.
 public class OcorrenciaAccessFilter : IAsyncActionFilter
 {
     private readonly IOcorrenciaAccessService _acesso;
@@ -17,7 +17,7 @@ public class OcorrenciaAccessFilter : IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        // Rotas publicas nao exigem validacao de usuario no banco.
+        // Rotas públicas não exigem validação de usuário no banco.
         if (context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() != null)
         {
             await next();
@@ -27,13 +27,13 @@ public class OcorrenciaAccessFilter : IAsyncActionFilter
         var userId = _acesso.ObterIdUsuario(context.HttpContext.User);
         if (!userId.HasValue)
         {
-            context.Result = new UnauthorizedObjectResult(new { mensagem = "JWT sem userId ou sub valido." });
+            context.Result = new UnauthorizedObjectResult(new { mensagem = "JWT sem userId ou sub válido." });
             return;
         }
 
         if (!_acesso.UsuarioAtivo(userId.Value))
         {
-            context.Result = new ObjectResult(new { mensagem = "Usuario inativo ou inexistente." }) { StatusCode = 403 };
+            context.Result = new ObjectResult(new { mensagem = "Usuário inativo ou inexistente." }) { StatusCode = 403 };
             return;
         }
 
@@ -42,7 +42,7 @@ public class OcorrenciaAccessFilter : IAsyncActionFilter
         var perfil = _acesso.ObterPerfil(context.HttpContext.User, userId.Value);
 
         if (rota.TryGetValue("idUsuario", out var usuarioObj) &&
-            decimal.TryParse(usuarioObj?.ToString(), out var rotaIdUsuario))
+            long.TryParse(usuarioObj?.ToString(), out var rotaIdUsuario))
         {
             if (perfil != "ADMIN" && rotaIdUsuario != userId.Value)
             {
@@ -51,14 +51,15 @@ public class OcorrenciaAccessFilter : IAsyncActionFilter
             }
         }
 
-        decimal idOcorrencia = 0;
-        var rotaDeOcorrencia = (rota.TryGetValue("ocorrenciaId", out var ocObj) &&
-                                decimal.TryParse(ocObj?.ToString(), out idOcorrencia)) ||
-                               (req.Path.Value?.StartsWith("/api/ocorrencias/", StringComparison.OrdinalIgnoreCase) == true &&
-                                rota.TryGetValue("id", out var idObj) &&
-                                decimal.TryParse(idObj?.ToString(), out idOcorrencia));
+        long idOcorrencia = 0;
+        var path = req.Path.Value ?? string.Empty;
+        var ehRotaOcorrencia = path.Contains("/ocorrencias/", StringComparison.OrdinalIgnoreCase);
 
-        if (rotaDeOcorrencia)
+        var achouOcorrenciaId =
+            (rota.TryGetValue("ocorrenciaId", out var ocObj) && long.TryParse(ocObj?.ToString(), out idOcorrencia)) ||
+            (ehRotaOcorrencia && rota.TryGetValue("id", out var idObj) && long.TryParse(idObj?.ToString(), out idOcorrencia));
+
+        if (achouOcorrenciaId && idOcorrencia > 0)
         {
             if (!_acesso.ExisteOcorrencia(idOcorrencia))
             {

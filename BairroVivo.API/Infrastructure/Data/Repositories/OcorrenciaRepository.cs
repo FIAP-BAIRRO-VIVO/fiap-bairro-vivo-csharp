@@ -19,20 +19,42 @@ namespace BairroVivo.Infrastructure.Data.Repositories
                 .Include(o => o.Categoria)
                 .Include(o => o.Municipio)
                 .Include(o => o.Midias)
-                .OrderByDescending(o => o.CriadaEm)
+                .Include(o => o.Votos)
+                .Where(o => o.FlExcluida == "N")
+                .OrderByDescending(o => o.DtCriacao)
                 .ToList();
 
-        // Paginacao com Offset/Limit conforme Aula 07 e padrao Amandaba.
         public (IEnumerable<OcorrenciaEntity> Itens, int Total) ObterPaginado(
-            int deslocamento, int limite, string? status, string? urgencia,
-            string? bairro, decimal? idCategoria, decimal? idMunicipio, string? ordem)
+            int deslocamento, int limite,
+            decimal? minLat, decimal? maxLat, decimal? minLon, decimal? maxLon,
+            long? idCategoria, long? idMunicipio, string? status, string? ordem)
         {
             var consulta = _context.Ocorrencias
                 .Include(o => o.Usuario)
                 .Include(o => o.Categoria)
                 .Include(o => o.Municipio)
                 .Include(o => o.Midias)
+                .Include(o => o.Votos)
+                .Where(o => o.FlExcluida == "N")
                 .AsQueryable();
+
+            if (minLat.HasValue)
+                consulta = consulta.Where(o => o.Latitude >= minLat.Value);
+
+            if (maxLat.HasValue)
+                consulta = consulta.Where(o => o.Latitude <= maxLat.Value);
+
+            if (minLon.HasValue)
+                consulta = consulta.Where(o => o.Longitude >= minLon.Value);
+
+            if (maxLon.HasValue)
+                consulta = consulta.Where(o => o.Longitude <= maxLon.Value);
+
+            if (idCategoria.HasValue && idCategoria.Value > 0)
+                consulta = consulta.Where(o => o.IdCategoria == idCategoria.Value);
+
+            if (idMunicipio.HasValue && idMunicipio.Value > 0)
+                consulta = consulta.Where(o => o.IdMunicipio == idMunicipio.Value);
 
             if (!string.IsNullOrWhiteSpace(status))
             {
@@ -40,34 +62,11 @@ namespace BairroVivo.Infrastructure.Data.Repositories
                 consulta = consulta.Where(o => o.Status.ToUpper() == filtroStatus);
             }
 
-            if (!string.IsNullOrWhiteSpace(urgencia))
-            {
-                var filtroUrgencia = urgencia.Trim().ToUpperInvariant();
-                consulta = consulta.Where(o => o.Urgencia.ToUpper() == filtroUrgencia);
-            }
-
-            if (!string.IsNullOrWhiteSpace(bairro))
-            {
-                var filtroBairro = bairro.Trim().ToUpperInvariant();
-                consulta = consulta.Where(o => o.Bairro.ToUpper().Contains(filtroBairro));
-            }
-
-            if (idCategoria.HasValue && idCategoria.Value > 0)
-            {
-                consulta = consulta.Where(o => o.IdCategoria == idCategoria.Value);
-            }
-
-            if (idMunicipio.HasValue && idMunicipio.Value > 0)
-            {
-                consulta = consulta.Where(o => o.IdMunicipio == idMunicipio.Value);
-            }
-
             consulta = (ordem ?? "recentes").ToLowerInvariant() switch
             {
-                "confirmacoes" => consulta.OrderByDescending(o => o.Confirmacoes).ThenByDescending(o => o.IdOcorrencia),
                 "titulo" => consulta.OrderBy(o => o.Titulo).ThenBy(o => o.IdOcorrencia),
-                "antigas" => consulta.OrderBy(o => o.CriadaEm).ThenBy(o => o.IdOcorrencia),
-                _ => consulta.OrderByDescending(o => o.CriadaEm).ThenByDescending(o => o.IdOcorrencia)
+                "antigas" => consulta.OrderBy(o => o.DtCriacao).ThenBy(o => o.IdOcorrencia),
+                _ => consulta.OrderByDescending(o => o.DtCriacao).ThenByDescending(o => o.IdOcorrencia)
             };
 
             var total = consulta.Count();
@@ -76,14 +75,15 @@ namespace BairroVivo.Infrastructure.Data.Repositories
         }
 
         public (IEnumerable<OcorrenciaEntity> Itens, int Total) ObterPorUsuarioPaginado(
-            decimal idUsuario, int deslocamento, int limite, string? status, string? ordem)
+            long idUsuario, int deslocamento, int limite, string? status, string? ordem)
         {
             var consulta = _context.Ocorrencias
                 .Include(o => o.Usuario)
                 .Include(o => o.Categoria)
                 .Include(o => o.Municipio)
                 .Include(o => o.Midias)
-                .Where(o => o.IdUsuario == idUsuario);
+                .Include(o => o.Votos)
+                .Where(o => o.IdUsuario == idUsuario && o.FlExcluida == "N");
 
             if (!string.IsNullOrWhiteSpace(status))
             {
@@ -93,9 +93,9 @@ namespace BairroVivo.Infrastructure.Data.Repositories
 
             consulta = (ordem ?? "recentes").ToLowerInvariant() switch
             {
-                "confirmacoes" => consulta.OrderByDescending(o => o.Confirmacoes).ThenByDescending(o => o.IdOcorrencia),
                 "titulo" => consulta.OrderBy(o => o.Titulo).ThenBy(o => o.IdOcorrencia),
-                _ => consulta.OrderByDescending(o => o.CriadaEm).ThenByDescending(o => o.IdOcorrencia)
+                "antigas" => consulta.OrderBy(o => o.DtCriacao).ThenBy(o => o.IdOcorrencia),
+                _ => consulta.OrderByDescending(o => o.DtCriacao).ThenByDescending(o => o.IdOcorrencia)
             };
 
             var total = consulta.Count();
@@ -103,14 +103,15 @@ namespace BairroVivo.Infrastructure.Data.Repositories
             return (itens, total);
         }
 
-        public OcorrenciaEntity? ObterPorId(decimal idOcorrencia)
+        public OcorrenciaEntity? ObterPorId(long idOcorrencia)
         {
             return _context.Ocorrencias
                 .Include(o => o.Usuario)
                 .Include(o => o.Categoria)
                 .Include(o => o.Municipio)
                 .Include(o => o.Midias)
-                .FirstOrDefault(o => o.IdOcorrencia == idOcorrencia);
+                .Include(o => o.Votos)
+                .FirstOrDefault(o => o.IdOcorrencia == idOcorrencia && o.FlExcluida == "N");
         }
 
         public OcorrenciaEntity Cadastrar(OcorrenciaEntity ocorrencia)
@@ -128,47 +129,51 @@ namespace BairroVivo.Infrastructure.Data.Repositories
 
         public void Remover(OcorrenciaEntity ocorrencia)
         {
-            _context.Ocorrencias.Remove(ocorrencia);
+            // Exclusão lógica obrigatória conforme Oracle Schema v1.2
+            ocorrencia.FlExcluida = "S";
+            ocorrencia.DtAtualizacao = DateTime.UtcNow;
             _context.SaveChanges();
         }
 
         public void RegistrarHistoricoStatus(HistoricoStatusOcorrenciaEntity historico)
         {
-            _context.HistoricoStatusOcorrencias.Add(historico);
+            _context.HistoricoStatus.Add(historico);
             _context.SaveChanges();
+        }
+
+        public IEnumerable<HistoricoStatusOcorrenciaEntity> ObterHistoricoStatus(long idOcorrencia)
+        {
+            return _context.HistoricoStatus
+                .Where(h => h.IdOcorrencia == idOcorrencia)
+                .OrderBy(h => h.DtEvento)
+                .ToList();
         }
 
         public MidiaOcorrenciaEntity AdicionarMidia(MidiaOcorrenciaEntity midia)
         {
-            _context.MidiasOcorrencia.Add(midia);
+            _context.Midias.Add(midia);
             _context.SaveChanges();
             return midia;
         }
 
-        public bool ExisteUsuario(decimal idUsuario)
+        public bool ExisteUsuario(long idUsuario)
         {
-            return _context.Usuarios.Count(u => u.IdUsuario == idUsuario) > 0;
+            return _context.Usuarios.Any(u => u.IdUsuario == idUsuario && u.FlAtivo == "S");
         }
 
-        public bool ExisteCategoria(decimal idCategoria)
+        public bool ExisteCategoria(long idCategoria)
         {
-            return _context.Categorias.Count(c => c.IdCategoria == idCategoria) > 0;
+            return _context.Categorias.Any(c => c.IdCategoria == idCategoria && c.FlAtiva == "S");
         }
 
-        public CategoriaEntity? ObterCategoria(decimal idCategoria)
+        public CategoriaEntity? ObterCategoria(long idCategoria)
         {
-            return _context.Categorias.FirstOrDefault(c => c.IdCategoria == idCategoria);
+            return _context.Categorias.FirstOrDefault(c => c.IdCategoria == idCategoria && c.FlAtiva == "S");
         }
 
-        public bool ExisteMunicipio(decimal idMunicipio)
+        public bool ExisteMunicipio(long idMunicipio)
         {
-            return _context.Municipios.Count(m => m.IdMunicipio == idMunicipio) > 0;
-        }
-
-        public decimal ObterProximoSequencialProtocolo()
-        {
-            var maxId = _context.Ocorrencias.Select(o => (decimal?)o.IdOcorrencia).Max() ?? 0m;
-            return maxId + 1m;
+            return _context.Municipios.Any(m => m.IdMunicipio == idMunicipio);
         }
     }
 }

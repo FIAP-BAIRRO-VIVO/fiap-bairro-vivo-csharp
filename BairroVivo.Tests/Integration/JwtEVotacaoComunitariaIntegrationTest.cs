@@ -15,7 +15,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
         _factory = factory;
     }
 
-    private HttpClient ClienteAutenticado(decimal userId, string perfil)
+    private HttpClient ClienteAutenticado(long userId, string perfil)
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -26,74 +26,119 @@ public class JwtEVotacaoComunitariaIntegrationTest
     [Fact]
     public async Task EndpointProtegido_SemToken_Retorna401()
     {
-        // Arrange
         var client = _factory.CreateClient();
-
-        // Act
-        var resposta = await client.GetAsync("/api/ocorrencias/me");
-
-        // Assert
+        var resposta = await client.GetAsync("/api/v1/ocorrencias/minhas");
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
 
     [Fact]
-    public async Task ModificarOcorrenciaDeOutroCidadao_SemSerAdmin_Retorna403()
+    public async Task ModificarOcorrenciaDeOutroCidadao_SemSerAutor_Retorna403()
     {
-        // Arrange: cidadao 2 tenta alterar status da ocorrencia 1 (pertencente ao cidadao 1)
+        // Cidadão 2 tenta editar a ocorrência 1 (pertencente ao cidadão 1)
         var client = ClienteAutenticado(2, "CIDADAO");
 
-        // Act
-        var resposta = await client.PatchAsJsonAsync(
-            "/api/ocorrencias/1/status",
-            new { status = "ARQUIVADA" });
+        var resposta = await client.PutAsJsonAsync(
+            "/api/v1/ocorrencias/1",
+            new
+            {
+                categoriaId = 1,
+                municipioId = 1,
+                titulo = "Tentativa indevida de edição",
+                descricao = "Descrição detalhada de teste para rejeição 403."
+            });
 
-        // Assert
         Assert.Equal(HttpStatusCode.Forbidden, resposta.StatusCode);
     }
 
     [Fact]
-    public async Task ModificarOcorrenciaDeOutroCidadao_ComoAdmin_Retorna204()
+    public async Task AdminNaoPodeAbrirOcorrencias_Retorna403()
     {
-        // Arrange: usuario 3 possui perfil ADMIN
+        // Administrador (usuário 3) tenta abrir ocorrência: proibido pelas regras de domínio
         var client = ClienteAutenticado(3, "ADMIN");
 
-        // Act
-        var resposta = await client.PatchAsJsonAsync(
-            "/api/ocorrencias/1/status",
-            new { status = "EM_ANDAMENTO", observacao = "Vistoria agendada pela prefeitura." });
+        var resposta = await client.PostAsJsonAsync(
+            "/api/v1/ocorrencias",
+            new
+            {
+                categoriaId = 1,
+                municipioId = 1,
+                titulo = "Abertura por administrador",
+                descricao = "Tentativa de abertura de ocorrência por perfil administrativo."
+            });
 
-        // Assert
-        Assert.Equal(HttpStatusCode.NoContent, resposta.StatusCode);
-
-        // Restaura
-        await client.PatchAsJsonAsync("/api/ocorrencias/1/status", new { status = "ABERTA" });
+        Assert.Equal(HttpStatusCode.Forbidden, resposta.StatusCode);
     }
 
     [Fact]
-    public async Task VotacaoComunitaria_ConfirmacaoEVotoDuplicado_ValidaComunidadeERetorna409NoSegundoVoto()
+    public async Task AdminConsultaRelatorios_Retorna200()
     {
-        // Arrange: cidadao 2 confirma ("Ainda esta la!") na ocorrencia 1 (que ja possui 2 confirmacoes)
-        var client = ClienteAutenticado(2, "CIDADAO");
-        var voto = new
+        var client = ClienteAutenticado(3, "ADMIN");
+        var resposta = await client.GetAsync("/api/v1/admin/relatorios/ocorrencias");
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task AnonimatoPublico_OcorrenciaComFlAnonimoS_MascaraAutorComoCidadaoAnonimo()
+    {
+        var client = _factory.CreateClient();
+        var resposta = await client.GetAsync("/api/v1/ocorrencias/2");
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        using var doc = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync());
+        Assert.Equal("Cidadao anonimo", doc.RootElement.GetProperty("autorExibicao").GetString());
+    }
+
+    [Fact]
+    public async Task VotacaoComunitaria_DoisVotosResolvido_EncerraOcorrenciaEElevaCiclo()
+    {
+        // Criar uma nova ocorrência com o Cidadão 1 para testar o ciclo completo de votos
+        var autor = ClienteAutenticado(1, "CIDADAO");
+        var novaOcResp = await autor.PostAsJsonAsync("/api/v1/ocorrencias", new
         {
-            tipo = "CONFIRMACAO",
-            comentario = "Passei hoje cedo e o buraco continua aberto!"
-        };
+            categoriaId = 1,
+            municipioId = 1,
+            titulo = "Semáforo piscando em amarelo",
+            descricao = "Cruzamento perigoso com semáforo em pane há horas.",
+            latitude = -23.5614m,
+            longitude = -46.6558m,
+            enderecoReferencia = "Esquina com Alameda Santos"
+        });
 
-        // Act 1: primeiro voto
-        var primeiroVoto = await client.PostAsJsonAsync("/api/ocorrencias/1/atualizacoes", voto);
+        Assert.Equal(HttpStatusCode.Created, novaOcResp.StatusCode);
+        using var ocDoc = JsonDocument.Parse(await novaOcResp.Content.ReadAsStringAsync());
+        var idNova = ocDoc.RootElement.GetProperty("id").GetString()!;
 
-        // Assert 1: 201 Created e ocorrencia 1 passa a ter VALIDADA_COMUNIDADE = S
-        Assert.Equal(HttpStatusCode.Created, primeiroVoto.StatusCode);
+        // Voto 1: Cidadão 1 vota RESOLVIDO
+        var cidadao1 = ClienteAutenticado(1, "CIDADAO");
+        var voto1 = await cidadao1.PostAsJsonAsync($"/api/v1/ocorrencias/{idNova}/atualizacoes", new
+        {
+            tipo = "RESOLVIDO",
+            texto = "A equipe da CET acabou de arrumar o semáforo."
+        });
+        Assert.Equal(HttpStatusCode.Created, voto1.StatusCode);
 
-        var consultaOcorrencia = await client.GetAsync("/api/ocorrencias/1");
-        using var doc = JsonDocument.Parse(await consultaOcorrencia.Content.ReadAsStringAsync());
-        Assert.Equal("S", doc.RootElement.GetProperty("validadaComunidade").GetString());
+        // Tentativa de voto duplicado no mesmo ciclo pelo Cidadão 1 -> 409 Conflict
+        var votoDuplicado = await cidadao1.PostAsJsonAsync($"/api/v1/ocorrencias/{idNova}/atualizacoes", new
+        {
+            tipo = "RESOLVIDO",
+            texto = "Confirmando novamente que o semáforo foi arrumado."
+        });
+        Assert.Equal(HttpStatusCode.Conflict, votoDuplicado.StatusCode);
 
-        // Act 2: tentativa de voto duplicado pelo mesmo cidadao 2
-        var segundoVoto = await client.PostAsJsonAsync("/api/ocorrencias/1/atualizacoes", voto);
+        // Voto 2: Cidadão 2 vota RESOLVIDO -> atinge os 2 votos necessários e transiciona para RESOLVIDA no ciclo 2
+        var cidadao2 = ClienteAutenticado(2, "CIDADAO");
+        var voto2 = await cidadao2.PostAsJsonAsync($"/api/v1/ocorrencias/{idNova}/atualizacoes", new
+        {
+            tipo = "RESOLVIDO",
+            texto = "Também passei por lá e o trânsito está fluindo normalmente."
+        });
+        Assert.Equal(HttpStatusCode.Created, voto2.StatusCode);
 
-        // Assert 2: 409 Conflict
-        Assert.Equal(HttpStatusCode.Conflict, segundoVoto.StatusCode);
+        // Verifica estado atualizado da ocorrência
+        var consulta = await _factory.CreateClient().GetAsync($"/api/v1/ocorrencias/{idNova}");
+        using var consultaDoc = JsonDocument.Parse(await consulta.Content.ReadAsStringAsync());
+
+        Assert.Equal("RESOLVIDA", consultaDoc.RootElement.GetProperty("status").GetString());
+        Assert.Equal(2, consultaDoc.RootElement.GetProperty("numeroCiclo").GetInt32());
     }
 }

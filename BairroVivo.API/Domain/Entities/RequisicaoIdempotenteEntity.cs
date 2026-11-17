@@ -2,22 +2,22 @@ namespace BairroVivo.Domain.Entities
 {
     public class RequisicaoIdempotenteEntity
     {
-        public decimal IdRequisicao { get; set; }
+        public long IdRequisicao { get; set; }
 
-        public string ChaveIdempotencia { get; set; } = string.Empty;
+        public long IdUsuario { get; set; }
 
-        public decimal? IdUsuario { get; set; }
+        public string Chave { get; set; } = string.Empty;
 
-        public string Endpoint { get; set; } = string.Empty;
+        public string Rota { get; set; } = string.Empty;
 
         public string MetodoHttp { get; set; } = string.Empty;
 
-        public int StatusHttpResposta { get; set; }
+        public string HashCorpo { get; set; } = string.Empty;
 
-        public string? CorpoResposta { get; set; }
+        public long? IdRecurso { get; set; }
 
-        public DateTime CriadaEm { get; set; }
+        public DateTime DtCriacao { get; set; } = DateTime.UtcNow;
 
-        public DateTime ExpiraEm { get; set; }
+        public UsuarioEntity Usuario { get; set; } = null!;
     }
 }

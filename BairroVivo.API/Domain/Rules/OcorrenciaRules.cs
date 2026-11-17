@@ -1,23 +1,12 @@
 namespace BairroVivo.Domain.Rules;
 
-// Regras de dominio puras, sem dependencia de banco ou HTTP, facilitando xUnit.
+// Regras de domínio puras para Ocorrência no Oracle v1.2
 public static class OcorrenciaRules
 {
     private static readonly string[] StatusValidos =
     {
         "ABERTA",
-        "EM_ANALISE",
-        "EM_ANDAMENTO",
-        "RESOLVIDA",
-        "ARQUIVADA"
-    };
-
-    private static readonly string[] UrgenciasValidas =
-    {
-        "BAIXA",
-        "MEDIA",
-        "ALTA",
-        "CRITICA"
+        "RESOLVIDA"
     };
 
     public static string ValidarTitulo(string? titulo)
@@ -25,8 +14,8 @@ public static class OcorrenciaRules
         var normalizado = titulo?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(normalizado) || normalizado.Length < 5)
             throw new ArgumentException("O título da ocorrência deve conter pelo menos 5 caracteres.");
-        if (normalizado.Length > 140)
-            throw new ArgumentException("O título da ocorrência deve conter no máximo 140 caracteres.");
+        if (normalizado.Length > 150)
+            throw new ArgumentException("O título da ocorrência deve conter no máximo 150 caracteres.");
         return normalizado;
     }
 
@@ -38,11 +27,14 @@ public static class OcorrenciaRules
         return normalizado;
     }
 
-    public static string ValidarBairro(string? bairro)
+    public static string? ValidarEnderecoReferencia(string? enderecoReferencia)
     {
-        var normalizado = bairro?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(normalizado))
-            throw new ArgumentException("O bairro da ocorrência é obrigatório.");
+        if (string.IsNullOrWhiteSpace(enderecoReferencia))
+            return null;
+
+        var normalizado = enderecoReferencia.Trim();
+        if (normalizado.Length > 255)
+            throw new ArgumentException("O endereço de referência deve conter no máximo 255 caracteres.");
         return normalizado;
     }
 
@@ -50,18 +42,20 @@ public static class OcorrenciaRules
     {
         var normalizado = status?.Trim().ToUpperInvariant() ?? string.Empty;
         if (!StatusValidos.Contains(normalizado))
-            throw new ArgumentException("Status inválido. Utilize ABERTA, EM_ANALISE, EM_ANDAMENTO, RESOLVIDA ou ARQUIVADA.");
+            throw new ArgumentException("Status inválido. Utilize ABERTA ou RESOLVIDA.");
         return normalizado;
     }
 
-    public static string ValidarUrgencia(string? urgencia)
+    public static string ValidarAnonimo(bool? anonimo)
     {
-        if (string.IsNullOrWhiteSpace(urgencia))
-            return "MEDIA";
+        return anonimo == true ? "S" : "N";
+    }
 
-        var normalizado = urgencia.Trim().ToUpperInvariant();
-        if (!UrgenciasValidas.Contains(normalizado))
-            throw new ArgumentException("Urgência inválida. Utilize BAIXA, MEDIA, ALTA ou CRITICA.");
+    public static string ValidarAnonimo(string? flAnonimo)
+    {
+        var normalizado = flAnonimo?.Trim().ToUpperInvariant() ?? "N";
+        if (normalizado != "S" && normalizado != "N")
+            throw new ArgumentException("Flag de anonimato inválida. Utilize 'S' ou 'N'.");
         return normalizado;
     }
 
@@ -71,10 +65,5 @@ public static class OcorrenciaRules
             throw new ArgumentException("Latitude inválida. O valor deve estar entre -90 e 90.");
         if (longitude < -180m || longitude > 180m)
             throw new ArgumentException("Longitude inválida. O valor deve estar entre -180 e 180.");
-    }
-
-    public static string GerarProtocolo(DateTime dataReferencia, decimal sequencial)
-    {
-        return $"BV-{dataReferencia:yyyy}-{sequencial:000000}";
     }
 }

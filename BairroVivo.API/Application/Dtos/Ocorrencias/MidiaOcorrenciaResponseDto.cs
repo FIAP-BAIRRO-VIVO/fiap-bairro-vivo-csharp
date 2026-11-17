@@ -1,12 +1,44 @@
+using System.Text.Json.Serialization;
+
 namespace BairroVivo.Application.Dtos.Ocorrencias
 {
     public class MidiaOcorrenciaResponseDto
     {
-        public decimal IdMidia { get; set; }
-        public decimal IdOcorrencia { get; set; }
-        public string UrlMidia { get; set; } = string.Empty;
-        public string TipoMidia { get; set; } = string.Empty;
-        public string Principal { get; set; } = string.Empty;
-        public DateTime CriadaEm { get; set; }
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("idMidia")]
+        public long IdMidia
+        {
+            get => long.TryParse(Id, out var val) ? val : 0;
+            set => Id = value.ToString();
+        }
+
+        [JsonPropertyName("idOcorrencia")]
+        public string IdOcorrencia { get; set; } = string.Empty;
+
+        [JsonPropertyName("idAtualizacao")]
+        public string? IdAtualizacao { get; set; }
+
+        [JsonPropertyName("provedor")]
+        public string Provedor { get; set; } = string.Empty;
+
+        [JsonPropertyName("chaveStorage")]
+        public string ChaveStorage { get; set; } = string.Empty;
+
+        [JsonPropertyName("urlExibicao")]
+        public string? UrlExibicao { get; set; }
+
+        [JsonPropertyName("urlMidia")]
+        public string? UrlMidia => UrlExibicao ?? ChaveStorage;
+
+        [JsonPropertyName("mimeType")]
+        public string MimeType { get; set; } = string.Empty;
+
+        [JsonPropertyName("tamanhoBytes")]
+        public long TamanhoBytes { get; set; }
+
+        [JsonPropertyName("dtCriacao")]
+        public DateTime DtCriacao { get; set; }
     }
 }

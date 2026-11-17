@@ -24,24 +24,25 @@ namespace BairroVivo.Tests.App
             // Arrange
             using var context = CriarContexto();
 
-            var municipio = new MunicipioEntity { IdMunicipio = 1, CodigoIbge = "3550308", Nome = "São Paulo", Uf = "SP", Ativo = "S" };
-            var usuario = new UsuarioEntity { IdUsuario = 1, Nome = "Maria Silva", Email = "maria@bairrovivo.com", SenhaHash = "hash", Perfil = "CIDADAO", Ativo = "S", CriadoEm = DateTime.Now };
-            var categoria = new CategoriaEntity { IdCategoria = 1, Nome = "Buraco na Via", SlaDiasPadrao = 10, Ativo = "S" };
+            var municipio = new MunicipioEntity { IdMunicipio = 1, CodigoIbge = 3550308, Nome = "São Paulo", Uf = "SP" };
+            var usuario = new UsuarioEntity { IdUsuario = 1, Nome = "Maria Silva", Email = "maria@bairrovivo.com", SenhaHash = "hash", Papel = "CIDADAO", FlAtivo = "S", DtCriacao = DateTime.UtcNow };
+            var categoria = new CategoriaEntity { IdCategoria = 1, Nome = "Buraco na Via", FlAtiva = "S" };
             var ocorrencia = new OcorrenciaEntity
             {
                 IdOcorrencia = 1,
-                Protocolo = "BV-2026-000001",
                 IdUsuario = 1,
                 IdCategoria = 1,
                 IdMunicipio = 1,
                 Titulo = "Buraco fundo na rua",
                 Descricao = "Buraco grande causando risco aos motoristas.",
-                Bairro = "Bela Vista",
+                EnderecoReferencia = "Próximo à praça principal",
                 Status = "ABERTA",
-                Urgencia = "ALTA",
+                NumCiclo = 1,
+                FlExcluida = "N",
                 Latitude = -23.5614m,
                 Longitude = -46.6558m,
-                CriadaEm = DateTime.Now,
+                DtCriacao = DateTime.UtcNow,
+                DtAtualizacao = DateTime.UtcNow,
                 Usuario = usuario,
                 Categoria = categoria,
                 Municipio = municipio
@@ -61,7 +62,6 @@ namespace BairroVivo.Tests.App
             // Assert
             Assert.NotNull(resultado);
             Assert.Equal(1, resultado.IdOcorrencia);
-            Assert.Equal("BV-2026-000001", resultado.Protocolo);
             Assert.NotNull(resultado.Categoria);
             Assert.Equal("Buraco na Via", resultado.Categoria.Nome);
         }
@@ -70,14 +70,11 @@ namespace BairroVivo.Tests.App
         [Trait("OcorrenciaRepository", "ObterPorId")]
         public void ObterPorId_OcorrenciaInexistente_RetornaNull()
         {
-            // Arrange
             using var context = CriarContexto();
             var repository = new OcorrenciaRepository(context);
 
-            // Act
             var resultado = repository.ObterPorId(999);
 
-            // Assert
             Assert.Null(resultado);
         }
 
@@ -85,31 +82,29 @@ namespace BairroVivo.Tests.App
         [Trait("OcorrenciaRepository", "Cadastrar")]
         public void Cadastrar_OcorrenciaValida_SalvaOcorrencia()
         {
-            // Arrange
             using var context = CriarContexto();
             var repository = new OcorrenciaRepository(context);
 
             var ocorrencia = new OcorrenciaEntity
             {
                 IdOcorrencia = 1,
-                Protocolo = "BV-2026-000001",
                 IdUsuario = 1,
                 IdCategoria = 1,
                 IdMunicipio = 1,
                 Titulo = "Poste apagado",
                 Descricao = "Poste sem iluminação há duas semanas.",
-                Bairro = "Pinheiros",
+                EnderecoReferencia = "Rua dos Pinheiros",
                 Status = "ABERTA",
-                Urgencia = "MEDIA",
+                NumCiclo = 1,
+                FlExcluida = "N",
                 Latitude = -23.56m,
                 Longitude = -46.69m,
-                CriadaEm = DateTime.Now
+                DtCriacao = DateTime.UtcNow,
+                DtAtualizacao = DateTime.UtcNow
             };
 
-            // Act
             var resultado = repository.Cadastrar(ocorrencia);
 
-            // Assert
             Assert.NotNull(resultado);
             Assert.Equal(1, resultado.IdOcorrencia);
             var salva = context.Ocorrencias.FirstOrDefault(o => o.IdOcorrencia == 1);
@@ -119,38 +114,40 @@ namespace BairroVivo.Tests.App
         }
 
         [Fact]
-        [Trait("OcorrenciaRepository", "Atualizar")]
-        public void Atualizar_OcorrenciaExistente_SalvaAlteracoes()
+        [Trait("OcorrenciaRepository", "Remover")]
+        public void Remover_ExecutaExclusaoLogica_SetaFlExcluidaComoS()
         {
-            // Arrange
             using var context = CriarContexto();
             var ocorrencia = new OcorrenciaEntity
             {
                 IdOcorrencia = 1,
-                Protocolo = "BV-2026-000001",
                 IdUsuario = 1,
                 IdCategoria = 1,
                 IdMunicipio = 1,
                 Titulo = "Calçada quebrada",
                 Descricao = "Calçada danificada na esquina.",
-                Bairro = "Moema",
+                EnderecoReferencia = "Moema",
                 Status = "ABERTA",
-                Urgencia = "MEDIA",
-                CriadaEm = DateTime.Now
+                NumCiclo = 1,
+                FlExcluida = "N",
+                Latitude = -23.60m,
+                Longitude = -46.66m,
+                DtCriacao = DateTime.UtcNow,
+                DtAtualizacao = DateTime.UtcNow
             };
 
             context.Ocorrencias.Add(ocorrencia);
             context.SaveChanges();
 
             var repository = new OcorrenciaRepository(context);
-            ocorrencia.Status = "RESOLVIDA";
 
-            // Act
-            repository.Atualizar(ocorrencia);
+            // Act: exclusão lógica
+            repository.Remover(ocorrencia);
 
-            // Assert
-            var atualizada = context.Ocorrencias.First(o => o.IdOcorrencia == 1);
-            Assert.Equal("RESOLVIDA", atualizada.Status);
+            // Assert: no banco a ocorrência permanece com FL_EXCLUIDA = 'S', mas ObterPorId ignora
+            var noBanco = context.Ocorrencias.First(o => o.IdOcorrencia == 1);
+            Assert.Equal("S", noBanco.FlExcluida);
+            Assert.Null(repository.ObterPorId(1));
         }
     }
 }

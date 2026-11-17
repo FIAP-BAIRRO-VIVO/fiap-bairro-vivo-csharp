@@ -4,6 +4,6 @@ namespace BairroVivo.API.Application.Interfaces;
 
 public interface IIntegracaoOracleUseCase
 {
-    Task ExecutarRegistrarAtualizacaoAsync(decimal idOcorrencia, decimal idUsuario, AtualizacaoRequestDto dto);
-    Task<int> ContarVotosAtivosAsync(decimal idOcorrencia);
+    Task<long> ExecutarRegistrarAtualizacaoAsync(long idOcorrencia, long idUsuario, AtualizacaoRequestDto dto);
+    Task<int> ContarVotosAtivosAsync(long idOcorrencia, string tipoVoto);
 }
