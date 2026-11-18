@@ -1,0 +1,47 @@
+======================================================================
+FIAP — GLOBAL SOLUTION 2026/2 · CITIZENTECH
+Disciplina: Advanced Business Development with .NET
+Turma: 2TDSPO (2º Semestre · 2026)
+Projeto: Bairro Vivo — API de Zeladoria Urbana Participativa
+======================================================================
+
+INTEGRANTES DO GRUPO:
+- Grazielle Alencar              RM: 561529
+- Rafael Kubagawa Ramos          RM: 565572
+- Diego Andrade dos Santos       RM: 566385
+- Vinicius Soteras Braga         RM: 566230
+- Julia Correa e Souza de Altino RM: 564870
+
+----------------------------------------------------------------------
+LINKS OFICIAIS DO PROJETO:
+----------------------------------------------------------------------
+Repositório GitHub:
+https://github.com/FIAP-BAIRRO-VIVO/fiap-bairro-vivo-csharp
+
+API em Produção (Render):
+https://fiap-bairro-vivo-csharp.onrender.com
+
+Documentação Interativa Swagger / OpenAPI:
+https://fiap-bairro-vivo-csharp.onrender.com/swagger
+
+Health Checks Oficiais:
+- Liveness:  https://fiap-bairro-vivo-csharp.onrender.com/health/live
+- Database:  https://fiap-bairro-vivo-csharp.onrender.com/health/db
+- External:  https://fiap-bairro-vivo-csharp.onrender.com/health/external
+- Readiness: https://fiap-bairro-vivo-csharp.onrender.com/health/ready
+
+----------------------------------------------------------------------
+INSTRUÇÕES DE EXECUÇÃO LOCAL E TESTES:
+----------------------------------------------------------------------
+1. Restaurar pacotes:
+   dotnet restore
+
+2. Compilar projeto:
+   dotnet build
+
+3. Executar os 60 testes automatizados (xUnit + Moq + WebApplicationFactory):
+   dotnet test
+
+4. Executar a API localmente:
+   dotnet run --project BairroVivo.API
+======================================================================
