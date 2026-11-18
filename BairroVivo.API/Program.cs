@@ -64,6 +64,33 @@ builder.Services.AddControllers(options =>
 builder.Services.AddScoped<OcorrenciaAccessFilter>();
 builder.Services.AddScoped<IdempotencyFilter>();
 
+// CORS: Permite conexões do Frontend hospedado na Vercel (*.vercel.app) e ambiente local
+var originsConfig = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        policy.SetIsOriginAllowed(origin =>
+        {
+            if (string.IsNullOrWhiteSpace(origin)) return false;
+
+            if (originsConfig.Contains(origin, StringComparer.OrdinalIgnoreCase))
+                return true;
+
+            if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+            {
+                return uri.Host.EndsWith("vercel.app", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithExposedHeaders("Location", "Idempotency-Key", "X-Idempotent-Replay");
+    });
+});
+
 // Rate Limiting (Throttling) conforme diretrizes da Global Solution 2026/2
 var permitLimit = builder.Configuration.GetValue<int?>("RateLimit:PermitLimit") ?? 60;
 var windowSeconds = builder.Configuration.GetValue<int?>("RateLimit:WindowSeconds") ?? 60;
@@ -222,6 +249,8 @@ app.Use((context, next) =>
 });
 
 app.UseSerilogRequestLogging();
+
+app.UseCors("CorsPolicy");
 
 // Swagger disponivel para inspecao e homologacao da API (/swagger e /)
 app.UseSwagger();
