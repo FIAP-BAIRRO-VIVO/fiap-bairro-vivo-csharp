@@ -16,7 +16,7 @@ namespace BairroVivo.Application.Mappers
                 IdOcorrencia = idOcorrencia,
                 IdUsuario = idUsuario,
                 Tipo = dto.Tipo,
-                Texto = dto.Texto ?? dto.Comentario,
+                Texto = dto.Texto,
                 FlAnonimo = dto.AnonimoPublico ? "S" : "N",
                 DtCriacao = DateTime.UtcNow
             };

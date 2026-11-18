@@ -109,12 +109,11 @@ public class IdempotencyFilter : IAsyncActionFilter
                 if (ocorrencia != null)
                 {
                     var dto = ocorrencia.ToResponseDto();
-                    var respostaReplay = dto.ParaRespostaDetalhada();
 
                     if (req.Method == HttpMethods.Post)
-                        context.Result = new CreatedResult(rota + "/" + dto.Id, respostaReplay);
+                        context.Result = new CreatedResult(rota + "/" + dto.Id, dto);
                     else
-                        context.Result = new OkObjectResult(respostaReplay);
+                        context.Result = new OkObjectResult(dto);
 
                     return;
                 }

@@ -73,7 +73,7 @@ namespace BairroVivo.Application.UseCases
 
             var tipo = AtualizacaoRules.ValidarTipo(dto.Tipo);
             var flAnonimo = dto.AnonimoPublico ? "S" : "N";
-            var texto = dto.Texto ?? dto.Comentario;
+            var texto = dto.Texto;
 
             // Executa a procedure oficial PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO no Oracle
             // (ou simulação fiel em memória durante os testes unitários)

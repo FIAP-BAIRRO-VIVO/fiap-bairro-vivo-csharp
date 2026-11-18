@@ -16,14 +16,8 @@ namespace BairroVivo.Application.Dtos.Atualizacoes
             set => Id = value.ToString();
         }
 
-        [JsonPropertyName("atualizacaoId")]
-        public string AtualizacaoId => Id;
-
         [JsonPropertyName("idOcorrencia")]
         public string IdOcorrencia { get; set; } = string.Empty;
-
-        [JsonPropertyName("ocorrenciaId")]
-        public string OcorrenciaId => IdOcorrencia;
 
         [JsonPropertyName("tipo")]
         public string Tipo { get; set; } = string.Empty;
@@ -31,14 +25,8 @@ namespace BairroVivo.Application.Dtos.Atualizacoes
         [JsonPropertyName("texto")]
         public string? Texto { get; set; }
 
-        [JsonPropertyName("comentario")]
-        public string? Comentario => Texto;
-
         [JsonPropertyName("autorExibicao")]
         public string AutorExibicao { get; set; } = string.Empty;
-
-        [JsonPropertyName("nomeUsuario")]
-        public string NomeUsuario => AutorExibicao;
 
         [JsonPropertyName("anonimoPublico")]
         public bool AnonimoPublico { get; set; } = false;
@@ -57,9 +45,6 @@ namespace BairroVivo.Application.Dtos.Atualizacoes
 
         [JsonPropertyName("dtCriacao")]
         public DateTime DtCriacao { get; set; }
-
-        [JsonPropertyName("criadaEm")]
-        public DateTime CriadaEm => DtCriacao;
 
         [JsonPropertyName("midias")]
         public List<MidiaOcorrenciaResponseDto> Midias { get; set; } = new();

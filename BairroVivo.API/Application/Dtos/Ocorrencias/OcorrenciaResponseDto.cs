@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using BairroVivo.API.Application.Dtos;
 using BairroVivo.Application.Dtos.Categorias;
 using BairroVivo.Application.Dtos.Municipios;
 
@@ -70,26 +71,7 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
         [JsonPropertyName("totalVotosCiclo")]
         public int TotalVotosCiclo { get; set; }
 
-        // Propriedades retrocompatíveis para respostas e testes
-        [JsonPropertyName("bairro")]
-        public string? Bairro => EnderecoReferencia;
-
-        [JsonPropertyName("nomeUsuario")]
-        public string NomeUsuario => AutorExibicao;
-
-        [JsonPropertyName("confirmacoes")]
-        public int Confirmacoes => TotalVotosCiclo;
-
-        [JsonPropertyName("validadaComunidade")]
-        public string ValidadaComunidade => TotalVotosCiclo >= 2 || Status == "RESOLVIDA" ? "S" : "N";
-
-        [JsonPropertyName("protocolo")]
-        public string Protocolo => $"BV-{DtCriacao:yyyy}-{IdOcorrencia:000000}";
-
-        [JsonPropertyName("criadaEm")]
-        public DateTime CriadaEm => DtCriacao;
-
-        [JsonPropertyName("atualizadaEm")]
-        public DateTime? AtualizadaEm => DtAtualizacao;
+        [JsonPropertyName("links")]
+        public List<LinkDto> Links { get; set; } = new();
     }
 }

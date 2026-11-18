@@ -12,13 +12,6 @@ namespace BairroVivo.Application.Dtos.Atualizacoes
         [JsonPropertyName("texto")]
         public string? Texto { get; set; }
 
-        [JsonPropertyName("comentario")]
-        public string? Comentario
-        {
-            get => Texto;
-            set => Texto ??= value;
-        }
-
         [JsonPropertyName("anonimoPublico")]
         public bool AnonimoPublico { get; set; } = false;
 

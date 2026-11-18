@@ -26,7 +26,7 @@ public class IntegracaoOracleUseCase : IIntegracaoOracleUseCase
 
         var tipo = AtualizacaoRules.ValidarTipo(dto.Tipo);
         var flAnonimo = dto.AnonimoPublico ? "S" : "N";
-        var texto = dto.Texto ?? dto.Comentario;
+        var texto = dto.Texto;
 
         return await _integracaoOracleRepository.ExecutarRegistrarAtualizacaoAsync(
             idOcorrencia, idUsuario, tipo, texto, flAnonimo);

@@ -76,7 +76,8 @@ namespace BairroVivo.Application.Mappers
                 DtCriacao = entity.DtCriacao,
                 DtAtualizacao = entity.DtAtualizacao,
                 TotalVotosCiclo = totalVotosCiclo,
-                Midias = entity.Midias?.Select(m => m.ToResponseDto()).ToList() ?? new List<MidiaOcorrenciaResponseDto>()
+                Midias = entity.Midias?.Select(m => m.ToResponseDto()).ToList() ?? new List<MidiaOcorrenciaResponseDto>(),
+                Links = HateoasLinks.ParaOcorrencia(entity.IdOcorrencia)
             };
         }
 
@@ -93,41 +94,6 @@ namespace BairroVivo.Application.Mappers
                 MimeType = entity.MimeType,
                 TamanhoBytes = entity.TamanhoBytes,
                 DtCriacao = entity.DtCriacao
-            };
-        }
-
-        public static object ParaRespostaDetalhada(this OcorrenciaResponseDto o)
-        {
-            return new
-            {
-                o.Id,
-                o.IdOcorrencia,
-                o.Protocolo,
-                o.Titulo,
-                o.Descricao,
-                o.Status,
-                o.NumeroCiclo,
-                o.Categoria,
-                o.IdCategoria,
-                o.Municipio,
-                o.IdMunicipio,
-                o.Uf,
-                o.Latitude,
-                o.Longitude,
-                o.EnderecoReferencia,
-                o.Bairro,
-                o.AutorExibicao,
-                o.NomeUsuario,
-                o.AnonimoPublico,
-                o.DtCriacao,
-                o.CriadaEm,
-                o.DtAtualizacao,
-                o.AtualizadaEm,
-                o.TotalVotosCiclo,
-                o.Confirmacoes,
-                o.ValidadaComunidade,
-                o.Midias,
-                Links = HateoasLinks.ParaOcorrencia(o.IdOcorrencia)
             };
         }
     }

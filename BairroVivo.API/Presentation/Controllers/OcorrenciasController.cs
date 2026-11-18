@@ -99,7 +99,7 @@ namespace BairroVivo.Presentation.Controllers
             if (ocorrencia == null)
                 return NotFound(new { mensagem = "Ocorrência não encontrada." });
 
-            return Ok(ocorrencia.ParaRespostaDetalhada());
+            return Ok(ocorrencia);
         }
 
         [HttpGet("ocorrencias/{id:long}/historico")]
@@ -149,7 +149,7 @@ namespace BairroVivo.Presentation.Controllers
                 return CreatedAtAction(
                     nameof(ObterPorId),
                     new { id = criada.IdOcorrencia },
-                    criada.ParaRespostaDetalhada()
+                    criada
                 );
             }
             catch (KeyNotFoundException ex)

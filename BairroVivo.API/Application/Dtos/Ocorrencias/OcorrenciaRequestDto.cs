@@ -52,13 +52,5 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
 
         [JsonPropertyName("anonimoPublico")]
         public bool AnonimoPublico { get; set; } = false;
-
-        // Propriedades retrocompatíveis caso algum teste envie
-        [JsonPropertyName("bairro")]
-        public string? Bairro
-        {
-            get => EnderecoReferencia;
-            set => EnderecoReferencia ??= value;
-        }
     }
 }
