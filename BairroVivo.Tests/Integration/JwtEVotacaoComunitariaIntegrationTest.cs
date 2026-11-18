@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.IdentityModel.Tokens;
 
 namespace BairroVivo.Tests.Integration;
 
@@ -141,4 +143,72 @@ public class JwtEVotacaoComunitariaIntegrationTest
         Assert.Equal("RESOLVIDA", consultaDoc.RootElement.GetProperty("status").GetString());
         Assert.Equal(2, consultaDoc.RootElement.GetProperty("numeroCiclo").GetInt32());
     }
+
+    [Fact]
+    public async Task GerarTokenDev_EmiteTokenRS256ComContratoJava_EValidaEmEndpointProtegido()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Gera token RS256 pelo endpoint de autenticação
+        var responseToken = await client.PostAsJsonAsync("/api/auth/token", new
+        {
+            idUsuario = 1,
+            email = "maria@bairrovivo.com",
+            perfil = "CIDADAO"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, responseToken.StatusCode);
+        using var docToken = JsonDocument.Parse(await responseToken.Content.ReadAsStringAsync());
+        var tokenString = docToken.RootElement.GetProperty("token").GetString()!;
+
+        // 2. Inspeciona cabeçalho e claims do token
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(tokenString);
+
+        Assert.Equal("RS256", jwt.Header.Alg);
+        Assert.Equal("bairro-vivo-java", jwt.Issuer);
+        Assert.Contains("bairro-vivo-apis", jwt.Audiences);
+        Assert.Equal("1", jwt.Claims.First(c => c.Type == "sub").Value);
+        Assert.Equal("CIDADAO", jwt.Claims.First(c => c.Type == "roles").Value);
+
+        // 3. Usa o token RS256 para chamar endpoint protegido
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/ocorrencias/minhas");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenString);
+
+        var responseProtegido = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, responseProtegido.StatusCode);
+    }
+
+    [Fact]
+    public async Task TokenExclusivoJavaComSubERoles_IdentificaUsuarioEPerfilCorretamente()
+    {
+        var client = _factory.CreateClient();
+
+        // Emite token contendo estritamente as claims sub e roles definidas no contrato Java
+        var credenciais = new SigningCredentials(
+            new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(BairroVivoApiFactory.ChaveTeste)),
+            SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new("sub", "1"),
+            new("roles", "CIDADAO")
+        };
+
+        var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            issuer: "bairro-vivo-java",
+            audience: "bairro-vivo-apis",
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(2),
+            signingCredentials: credenciais);
+
+        var tokenString = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/ocorrencias/minhas");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenString);
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }
+

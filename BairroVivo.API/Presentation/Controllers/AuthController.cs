@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
+using BairroVivo.API.Infrastructure.Security;
 
 namespace BairroVivo.API.Presentation.Controllers;
 
@@ -14,12 +15,12 @@ namespace BairroVivo.API.Presentation.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IConfiguration _configuration;
-    private readonly IWebHostEnvironment _environment;
+    private readonly IJwtSecurityService _jwtSecurityService;
 
-    public AuthController(IConfiguration configuration, IWebHostEnvironment environment)
+    public AuthController(IConfiguration configuration, IJwtSecurityService jwtSecurityService)
     {
         _configuration = configuration;
-        _environment = environment;
+        _jwtSecurityService = jwtSecurityService;
     }
 
     public class TokenTesteRequestDto
@@ -37,26 +38,20 @@ public class AuthController : ControllerBase
     [SwaggerResponse(StatusCodes.Status200OK, "Token JWT gerado com sucesso.")]
     public IActionResult GerarToken([FromBody] TokenTesteRequestDto dto)
     {
-        var chaveJwt = _environment.IsEnvironment("Testing")
-            ? "somente-testes-xunit-chave-que-nao-deve-ser-usada-fora"
-            : _configuration["Jwt:Secret"] ?? "bairrovivo-secret-key-compartilhada-256bits-fiap-gs-2026";
-
         var emissor = _configuration["Jwt:Issuer"] ?? "bairro-vivo-java";
         var audiencia = _configuration["Jwt:Audience"] ?? "bairro-vivo-apis";
         var perfil = string.IsNullOrWhiteSpace(dto.Perfil) ? "CIDADAO" : dto.Perfil.Trim().ToUpperInvariant();
 
-        var credenciais = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(chaveJwt)),
-            SecurityAlgorithms.HmacSha256);
+        var credenciais = _jwtSecurityService.ObterCredenciaisAssinaturaDev();
 
         var expiraEm = DateTime.UtcNow.AddHours(4);
         var claims = new List<Claim>
         {
             new("sub", dto.IdUsuario.ToString()),
-            new("userId", dto.IdUsuario.ToString()),
+            new("roles", perfil),
             new("email", dto.Email),
             new("perfil", perfil),
-            new("roles", perfil)
+            new("userId", dto.IdUsuario.ToString())
         };
 
         var token = new JwtSecurityToken(

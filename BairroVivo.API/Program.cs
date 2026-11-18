@@ -6,6 +6,7 @@ using BairroVivo.API.Application.UseCases;
 using BairroVivo.API.Domain.Interfaces;
 using BairroVivo.API.Infrastructure.Data.Repositories;
 using BairroVivo.API.Infrastructure.Health;
+using BairroVivo.API.Infrastructure.Security;
 using BairroVivo.API.Presentation.Filters;
 using BairroVivo.Application.Interfaces;
 using BairroVivo.Application.UseCases;
@@ -173,16 +174,13 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseOracle(connectionString, oracleOptions =>
         oracleOptions.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion21)));
 
-// JWT compartilhado com o Auth Service em Java (HS256)
-var chaveJwt = builder.Environment.IsEnvironment("Testing")
-    ? "somente-testes-xunit-chave-que-nao-deve-ser-usada-fora"
-    : builder.Configuration["Jwt:Secret"];
-if (string.IsNullOrWhiteSpace(chaveJwt) || Encoding.UTF8.GetByteCount(chaveJwt) < 32)
-    throw new InvalidOperationException("Configure Jwt:Secret com pelo menos 32 bytes antes de iniciar a API.");
+// JWT compartilhado com o Auth Service em Java (RS256 / Fallback HS256)
+var jwtSecurityService = new JwtSecurityService(builder.Configuration, builder.Environment);
+builder.Services.AddSingleton<IJwtSecurityService>(jwtSecurityService);
 
 var emissorJwt = builder.Configuration["Jwt:Issuer"] ?? "bairro-vivo-java";
 var audienciaJwt = builder.Configuration["Jwt:Audience"] ?? "bairro-vivo-apis";
-var chaveSimetrica = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(chaveJwt));
+var chavesValidacao = jwtSecurityService.ObterChavesValidacao();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -195,7 +193,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidAudience = audienciaJwt,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = chaveSimetrica,
+            IssuerSigningKeys = chavesValidacao,
+            ValidAlgorithms = new[] { SecurityAlgorithms.RsaSha256, SecurityAlgorithms.HmacSha256 },
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
         };

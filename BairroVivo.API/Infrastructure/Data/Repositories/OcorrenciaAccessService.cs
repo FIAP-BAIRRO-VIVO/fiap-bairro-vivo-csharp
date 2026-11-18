@@ -16,9 +16,10 @@ public class OcorrenciaAccessService : IOcorrenciaAccessService
 
     public long? ObterIdUsuario(ClaimsPrincipal usuario)
     {
-        var claimId = usuario.FindFirst("userId")?.Value
-            ?? usuario.FindFirst("idUsuario")?.Value
-            ?? usuario.FindFirst("sub")?.Value;
+        var claimId = usuario.FindFirst("sub")?.Value
+            ?? usuario.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? usuario.FindFirst("userId")?.Value
+            ?? usuario.FindFirst("idUsuario")?.Value;
 
         if (long.TryParse(claimId, out var id) && id > 0)
             return id;
@@ -39,16 +40,17 @@ public class OcorrenciaAccessService : IOcorrenciaAccessService
 
     public string ObterPerfil(ClaimsPrincipal usuario, long idUsuario)
     {
-        var perfilClaim = usuario.FindFirst("perfil")?.Value
-            ?? usuario.FindFirst("roles")?.Value
-            ?? usuario.FindFirst(ClaimTypes.Role)?.Value;
+        var roles = usuario.FindAll("roles").Select(c => c.Value)
+            .Concat(usuario.FindAll("role").Select(c => c.Value))
+            .Concat(usuario.FindAll(ClaimTypes.Role).Select(c => c.Value))
+            .Concat(usuario.FindAll("perfil").Select(c => c.Value))
+            .ToList();
 
-        if (!string.IsNullOrWhiteSpace(perfilClaim))
-        {
-            if (perfilClaim.Contains("ADMIN", StringComparison.OrdinalIgnoreCase))
-                return "ADMIN";
-            return perfilClaim.Trim().ToUpperInvariant();
-        }
+        if (roles.Any(r => r.Contains("ADMIN", StringComparison.OrdinalIgnoreCase)))
+            return "ADMIN";
+
+        if (roles.Any(r => r.Contains("CIDADAO", StringComparison.OrdinalIgnoreCase) || r.Contains("USER", StringComparison.OrdinalIgnoreCase)))
+            return "CIDADAO";
 
         return _db.Usuarios.AsNoTracking()
             .Where(u => u.IdUsuario == idUsuario)
