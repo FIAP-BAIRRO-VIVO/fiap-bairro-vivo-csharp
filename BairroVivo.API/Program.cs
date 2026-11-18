@@ -24,6 +24,13 @@ using Serilog.Enrichers.Span;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Suporte a porta dinamica injetada pelo Render ($PORT)
+var renderPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(renderPort))
+{
+    builder.WebHost.UseUrls($"http://+:{renderPort}");
+}
+
 if (!builder.Environment.IsEnvironment("Testing"))
     builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
@@ -80,6 +87,7 @@ builder.Services.AddCors(options =>
             if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
             {
                 return uri.Host.EndsWith("vercel.app", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.EndsWith("onrender.com", StringComparison.OrdinalIgnoreCase)
                     || uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
                     || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase);
             }
