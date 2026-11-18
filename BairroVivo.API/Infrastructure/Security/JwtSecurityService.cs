@@ -60,7 +60,7 @@ public class JwtSecurityService : IJwtSecurityService
 
         if (!string.IsNullOrWhiteSpace(secret) && Encoding.UTF8.GetByteCount(secret) >= 32)
         {
-            chaves.Add(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)) { KeyId = "fallback-hs256-key" });
+            chaves.Add(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)));
         }
 
         return chaves;
