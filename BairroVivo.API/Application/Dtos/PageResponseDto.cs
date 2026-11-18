@@ -2,8 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace BairroVivo.API.Application.Dtos;
 
-// Mesma estrategia da aula 07 (offset, limit, total), mantendo o JSON
-// pagina/tamanho/total/dados utilizado pelo aplicativo e pelo Swagger.
+// Resposta paginada com metadados de navegação e HATEOAS
 public class PageResponseDto<T>
 {
     [JsonIgnore]

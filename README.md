@@ -1,105 +1,253 @@
-# Bairro Vivo API (.NET 8)
+# FIAP — Global Solution 2026/2
 
-API RESTful em .NET 8 do ecossistema **Bairro Vivo (CitizenTech — Global Solution 2026/2)**, responsável por gerenciar ocorrências de zeladoria urbana, mídias, relatórios executivos de bairro, categorias, municípios e votação/validação comunitária (*"Ainda está lá!"* e *"Já foi resolvido!"*).
+## Bairro Vivo API (.NET 8)
+**Disciplina:** Advanced Business Development with .NET  
+**Turma:** 2TDSPO (2º Semestre)  
+**Tema:** CitizenTech — Zeladoria Urbana Participativa e Consenso Comunitário  
 
-## Visão Geral do Ecossistema
+---
 
-O **Bairro Vivo** é composto por aplicações integradas que compartilham o banco **Oracle** e o mesmo contrato de autenticação **JWT**:
+## 📌 Links Oficiais do Projeto
 
-1. **Auth Service / Core Backend (Java Spring Boot):** realiza cadastro, login e emissão do token JWT (`HS256`) com claims de identidade (`sub`/`userId`) e perfil (`CIDADAO` ou `ADMIN`).
-2. **Bairro Vivo API (.NET 8 — este repositório):** consome o JWT emitido pelo serviço Java, valida vínculo e status ativo do usuário no Oracle (`TB_USUARIO`), aplica regras de autorização por perfil e propriedade da ocorrência, paginação com `Offset/Limit`, links **HATEOAS**, **Idempotência** (`Idempotency-Key` / `TB_REQUISICAO_IDEMPOTENTE`), **Rate Limiting** (`HTTP 429`), **Observabilidade** (`Serilog` + `HealthChecks`) e integração com pacotes PL/SQL (`PKG_COMUNIDADE`).
-3. **Serviço de IA & IoT (Python FastAPI):** classificação automática de fotos/descrições e geração de relatórios executivos por bairro.
-4. **Aplicativo Mobile (React Native) & Web:** interfaces para cidadãos e gestores públicos.
+* **Repositório GitHub:** [https://github.com/FIAP-BAIRRO-VIVO/fiap-bairro-vivo-csharp](https://github.com/FIAP-BAIRRO-VIVO/fiap-bairro-vivo-csharp)
+* **Ambiente de Produção (OnRender):** [https://fiap-bairro-vivo-csharp.onrender.com](https://fiap-bairro-vivo-csharp.onrender.com)
+* **Documentação Interativa Swagger / OpenAPI:** [https://fiap-bairro-vivo-csharp.onrender.com/swagger](https://fiap-bairro-vivo-csharp.onrender.com/swagger)
+* **Health Checks Oficiais:**
+  * Liveness (`/health/live`): [https://fiap-bairro-vivo-csharp.onrender.com/health/live](https://fiap-bairro-vivo-csharp.onrender.com/health/live)
+  * Banco Oracle (`/health/db`): [https://fiap-bairro-vivo-csharp.onrender.com/health/db](https://fiap-bairro-vivo-csharp.onrender.com/health/db)
+  * Serviço Externo ViaCEP (`/health/external`): [https://fiap-bairro-vivo-csharp.onrender.com/health/external](https://fiap-bairro-vivo-csharp.onrender.com/health/external)
+  * Readiness Geral (`/health/ready`): [https://fiap-bairro-vivo-csharp.onrender.com/health/ready](https://fiap-bairro-vivo-csharp.onrender.com/health/ready)
 
-```text
-Mobile / Web -> Java Auth Service (Login -> JWT)
-Mobile / Web -> .NET 8 Bairro Vivo API (Authorization: Bearer <JWT>)
-                    ├── Oracle (EF Core + PL/SQL PKG_COMUNIDADE)
-                    ├── Idempotência (TB_REQUISICAO_IDEMPOTENTE)
-                    ├── Rate Limiting (FixedWindow 429)
-                    └── ViaCEP HealthCheck (Geolocalização/CEP)
+---
+
+## 🏛️ Visão Geral e Arquitetura do Ecossistema
+
+O **Bairro Vivo** é uma plataforma colaborativa que empodera cidadãos no monitoramento e resolução de problemas urbanos (iluminação pública, buracos, descarte irregular de lixo, vazamentos e árvores caídas). O ecossistema é formado por microserviços especializados que compartilham a mesma base de dados transacional **Oracle Database 21c** e o mesmo contrato de segurança:
+
+1. **Auth Service (Java Spring Boot):** Gestão cadastral de munícipes e emissão de tokens JWT assimétricos (**RS256**).
+2. **Bairro Vivo API (.NET 8 — este repositório):** Core operacional da plataforma. Responsável pelo ciclo de vida das ocorrências, envio de mídias, histórico de status, consenso comunitário de votação, relatórios executivos por município e integração com procedimentos PL/SQL.
+3. **Frontend (React Native / Web):** Interface responsiva hospedada na Vercel e consumindo os endpoints RESTful.
+
+```
+       [ Dispositivos Móveis / Web Frontend ]
+                         │
+        ┌────────────────┴────────────────┐
+        ▼                                 ▼
+[ Java Auth Service ]            [ .NET 8 Bairro Vivo API ]
+(Cadastro / Login JWT)           (Ocorrências / Votação / HATEOAS)
+        │                                 │
+        │      Chave Pública RSA (RS256)  │
+        └────────────────────────────────►│
+                                          ▼
+                         [ Oracle Database 21c ]
+                         ├── Schema v1.2 (19 Tabelas)
+                         ├── Package PL/SQL (PKG_COMUNIDADE)
+                         ├── Idempotência (TB_REQUISICAO_IDEMPOTENTE)
+                         └── Views Executivas (VW_RELATORIO_OCORRENCIAS)
 ```
 
 ---
 
-## Arquitetura do Projeto
+## 🏗️ Estrutura do Projeto (Clean Architecture)
 
-O repositório segue **Clean Architecture** organizada em pastas dentro de `BairroVivo.API` e projeto de testes `BairroVivo.Tests`:
+A solução foi estruturada rigorosamente nos princípios de **Clean Architecture**, desacoplando regras de domínio de infraestrutura externa e frameworks:
 
 ```text
 BairroVivo.sln
 ├── BairroVivo.API/
-│   ├── Presentation/
-│   │   ├── Controllers/          # Endpoints HTTP, paginação e HATEOAS
-│   │   ├── Filters/              # OcorrenciaAccessFilter (JWT/Oracle) e IdempotencyFilter
-│   │   └── HateoasLinks.cs       # Geração centralizada de links HATEOAS
-│   ├── Application/
-│   │   ├── Dtos/                 # Contratos de entrada/saída, LinkDto e PageResponseDto
-│   │   ├── Interfaces/           # Contratos de UseCases e serviços de acesso
-│   │   ├── Mappers/              # Extension methods ToEntity, UpdateEntity e ToResponseDto
-│   │   └── UseCases/             # Orquestração dos casos de uso da aplicação
 │   ├── Domain/
-│   │   ├── Entities/             # Entidades de domínio espelhadas no modelo Oracle v1.1
-│   │   ├── Interfaces/           # Contratos de repositórios
-│   │   └── Rules/                # Regras puras de domínio (OcorrenciaRules, AtualizacaoRules)
-│   └── Infrastructure/
-│       ├── Data/
-│       │   ├── ApplicationContext.cs # Mapeamento Fluent API completo para o Oracle
-│       │   └── Repositories/     # Implementações EF Core e PL/SQL (IntegracaoOracleRepository)
-│       └── Health/               # ViaCepHealthCheck (IHealthCheck)
+│   │   ├── Entities/             # Entidades mapeadas para o Oracle Schema v1.2
+│   │   ├── Interfaces/           # Contratos abstratos dos repositórios
+│   │   └── Rules/                # Regras puras de negócio (OcorrenciaRules, AtualizacaoRules)
+│   ├── Application/
+│   │   ├── Dtos/                 # Contratos de entrada/saída, paginação e LinkDto
+│   │   ├── Interfaces/           # Contratos dos Use Cases da aplicação
+│   │   ├── Mappers/              # Conversores entre Entidades e DTOs
+│   │   └── UseCases/             # Orquestração e fluxos de aplicação
+│   ├── Infrastructure/
+│   │   ├── Data/
+│   │   │   ├── ApplicationContext.cs # Mapeamento Fluent API completo para Oracle
+│   │   │   └── Repositories/     # Repositórios EF Core e execução PL/SQL (Oracle/InMemory)
+│   │   ├── Health/               # Verificadores de saúde customizados (ViaCepHealthCheck)
+│   │   └── Security/             # Gestão de chaves RSA/RS256 e validação de JWT
+│   ├── Presentation/
+│   │   ├── Controllers/          # Controllers RESTful com anotações OpenAPI/Swagger
+│   │   ├── Filters/              # Filtros de Acesso (OcorrenciaAccessFilter) e Idempotência
+│   │   └── HateoasLinks.cs       # Geração centralizada de links de hipermídia RFC 8288
+│   ├── Program.cs                # Configuração do pipeline HTTP, DI, Rate Limiting e CORS
+│   └── appsettings.json          # Configurações de conexões, JWT e limites operacionais
 └── BairroVivo.Tests/
-    ├── Domain/                   # Testes unitários das regras de domínio (OcorrenciaRulesTest)
-    ├── App/                      # Testes unitários de Repositórios, UseCases e HealthChecks
-    └── Integration/              # WebApplicationFactory, JWT, HATEOAS, Paginação, Idempotência e Erros
+    ├── Domain/                   # Testes unitários de regras de domínio
+    ├── App/                      # Testes unitários de Use Cases e Repositórios com Moq
+    └── Integration/              # Testes de integração de ponta a ponta com WebApplicationFactory
 ```
 
 ---
 
-## Principais Funcionalidades Implementadas
+## 🚀 Requisitos Técnicos Implementados
 
-### 1. Autenticação e Autorização com JWT (`OcorrenciaAccessFilter`)
-- Validação de assinatura `HS256`, `Issuer` (`bairro-vivo-java`), `Audience` (`bairro-vivo-apis`) e expiração.
-- O filtro `OcorrenciaAccessFilter` consulta `TB_USUARIO` no Oracle para garantir que o usuário está ativo (`ATIVO = 'S'`).
-- Regras de acesso:
-  - **Leitura pública (`[AllowAnonymous]`):** listagem e consulta de ocorrências, atualizações, categorias, municípios, relatórios de bairro e health checks.
-  - **Cidadão autenticado (`CIDADAO`):** pode abrir ocorrências (`POST /api/ocorrencias`), consultar suas próprias ocorrências (`GET /api/ocorrencias/me`), anexar mídias, comentar e votar em ocorrências da comunidade (`POST /api/ocorrencias/{id}/atualizacoes`), e editar/excluir apenas ocorrências de sua autoria.
-  - **Administrador (`ADMIN`):** pode atualizar status, editar ou remover qualquer ocorrência e gerenciar categorias.
+### 1. Autenticação e Autorização Assimétrica (JWT RS256)
+- **Integração com Java:** Validação de tokens emitidos com algoritmo assimétrico **RS256**, utilizando chave pública RSA (carregada via `Jwt:PublicKey` ou arquivo PEM).
+- **Claims Padronizadas:** Mapeamento de identidade via claim `sub` (ID do munícipe) e autorização por perfil via claim `roles` (`CIDADAO` ou `ADMIN`).
+- **Validação no Oracle:** O filtro `OcorrenciaAccessFilter` verifica o vínculo do usuário em `TB_USUARIO` e bloqueia contas inativas (`ATIVO = 'N'`).
+- **Retrocompatibilidade:** Mantido suporte seguro a tokens `HS256` para homologação e execução dos testes automatizados.
 
-### 2. Paginação + HATEOAS (`PageResponseDto<T>` e `HateoasLinks`)
-- Paginação padronizada com cálculo de `Deslocamento = (pagina - 1) * tamanho` e retorno JSON com `pagina`, `tamanho`, `total`, `dados` e `links` (`self`, `first`, `last`, `prev`, `next`).
-- Cada ocorrência e atualização comunitária retorna seus próprios links de navegação e ações disponíveis (`self`, `update`, `status`, `delete`, `atualizacoes`, `confirmar_ou_votar`, `adicionar_midia`, `votos_oracle`).
+### 2. Hipermídia e Navegabilidade (HATEOAS)
+- Todos os recursos e coleções retornam links de hipermídia no padrão **RFC 8288**, orientando o cliente sobre as ações disponíveis:
+  - Recursos individuais: `self`, `update`, `delete`, `atualizacoes`, `atualizar_ou_votar`, `historico`, `adicionar_midia`.
+  - Coleções paginadas: `self`, `first`, `prev`, `next`, `last`.
 
-### 3. Votação Comunitária e Integração PL/SQL Oracle (`PKG_COMUNIDADE`)
-- Suporte a votos comunitários `CONFIRMACAO` (*"Ainda está lá!"*) e `JA_RESOLVIDO` (*"Já foi resolvido!"*).
-- Impede voto duplicado do mesmo cidadão na mesma modalidade para a mesma ocorrência (`HTTP 409 Conflict`).
-- Ao atingir **3 confirmações**, a ocorrência recebe automaticamente `VALIDADA_COMUNIDADE = 'S'` e tem sua urgência elevada.
-- Endpoints dedicados em `IntegracaoOracleController` para invocar diretamente no Oracle:
-  - `POST /api/ocorrencias/{ocorrenciaId}/integracao-oracle/registrar-atualizacao` -> `PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO`
-  - `GET /api/ocorrencias/{ocorrenciaId}/integracao-oracle/total-votos-ativos` -> `PKG_COMUNIDADE.FN_TOTAL_VOTOS_ATIVOS`
+### 3. Paginação Padronizada
+- Implementada via `PageResponseDto<T>` com os parâmetros de consulta `pagina` e `tamanho` (Offset/Limit).
+- O retorno JSON padronizado inclui `pagina`, `tamanho`, `total`, a coleção de `dados` e os links de navegação.
 
-### 4. Idempotência (`IdempotencyFilter`) e Rate Limiting (`HTTP 429`)
-- Requisições `POST`, `PUT` ou `PATCH` que enviam o cabeçalho `Idempotency-Key` têm a resposta persistida em `TB_REQUISICAO_IDEMPOTENTE` por 24 horas. Reenvios com a mesma chave retornam a resposta original com o cabeçalho `X-Idempotent-Replay: true` sem duplicar registros no banco.
-- `RateLimiter` configurado por IP com janela fixa retornando `HTTP 429 Too Many Requests` em caso de abuso.
+### 4. Idempotência de Requisições (`IdempotencyFilter`)
+- Proteção contra requisições duplicadas em métodos de escrita (`POST` e `PUT`) através do cabeçalho HTTP `Idempotency-Key`.
+- Persistência das chaves e do hash SHA-256 do payload em `TB_REQUISICAO_IDEMPOTENTE`.
+- Em caso de reenvio com o mesmo corpo, a API responde imediatamente com o recurso original e o cabeçalho `X-Idempotent-Replay: true`. Caso o payload divirja para a mesma chave, retorna `HTTP 409 Conflict`.
 
-### 5. Observabilidade, Logs Estruturados e HealthChecks
-- **Serilog** configurado com enriquecimento de ambiente, thread e correlação (`[TraceId:{TraceId}] [SpanId:{SpanId}]`).
-- **HealthChecks** disponíveis em:
-  - `/health/live` e `/api/health/live`
-  - `/health/db` e `/api/health/db` (Oracle)
-  - `/health/external` (ViaCEP)
-  - `/health/ready` e `/api/health/ready`
+### 5. Rate Limiting (Controle de Vazão)
+- Middleware nativo `Microsoft.AspNetCore.RateLimiting` configurado com política de janela fixa (`FixedWindowLimiter`) vinculada ao endereço IP do cliente.
+- Caso o limite seja ultrapassado, retorna `HTTP 429 Too Many Requests` com corpo padronizado.
+
+### 6. Consenso Comunitário e Procedimentos PL/SQL Oracle
+- A transição do status de ocorrências (`ABERTA` <-> `RESOLVIDA`) é orientada por consenso da vizinhança: são necessários **2 votos válidos de cidadãos distintos** no mesmo ciclo.
+- Registro de votos e comentários através do pacote PL/SQL `PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO` e consulta de votos ativos com `PKG_COMUNIDADE.FN_TOTAL_VOTOS_ATIVOS`.
+- Histórico completo de auditoria persistido em `TB_HISTORICO_STATUS`.
+
+### 7. Observabilidade e Logs Estruturados
+- **Serilog:** Logs estruturados enriquecidos com `TraceId`, `SpanId`, `Environment` e carimbo de data/hora em formato JSON/Console.
+- **Health Checks:** Monitoramento detalhado das dependências (`self`, `oracle` e `viacep`) exposto em endpoints padronizados.
+
+### 8. Política de CORS Dinâmica
+- Liberação configurada para aplicações Web hospedadas na **Vercel** (`*.vercel.app`), serviços no **Render** (`*.onrender.com`) e ambientes locais de desenvolvimento (`localhost`).
 
 ---
 
-## Como Executar e Testar
+## 📋 Catálogo Completo de Endpoints
 
-### Executar a API
+### 🔐 Autenticação e Testes
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/token` | Público | Emite token JWT de teste (RS256) compatível com o contrato Java. |
+
+### 📍 Ocorrências
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/ocorrencias` | Público | Lista ocorrências públicas com paginação, filtros e HATEOAS. |
+| `GET` | `/api/ocorrencias/{id}` | Público | Consulta os detalhes de uma ocorrência por ID. |
+| `GET` | `/api/ocorrencias/{id}/historico` | Público | Consulta a linha do tempo e transições de status da ocorrência. |
+| `POST` | `/api/ocorrencias` | Cidadão | Cadastra uma nova ocorrência vinculada ao usuário autenticado. |
+| `PUT` | `/api/ocorrencias/{id}` | Autor / Admin | Atualiza os dados de uma ocorrência existente. |
+| `DELETE` | `/api/ocorrencias/{id}` | Autor / Admin | Realiza a exclusão lógica da ocorrência (`FL_EXCLUIDA = 'S'`). |
+| `POST` | `/api/ocorrencias/{id}/midias` | Autor | Anexa metadados de fotos diretamente à ocorrência (`TB_MIDIA`). |
+
+### 👤 Minhas Ocorrências
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/ocorrencias/minhas` | Cidadão | Lista as ocorrências abertas pelo cidadão autenticado via JWT. |
+
+### 💬 Atualizações e Votação Comunitária
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/ocorrencias/{id}/atualizacoes` | Público | Lista atualizações, comentários e votos de uma ocorrência. |
+| `GET` | `/api/atualizacoes/{id}` | Público | Obtém detalhes de uma atualização específica. |
+| `POST` | `/api/ocorrencias/{id}/atualizacoes` | Cidadão | Registra comentário ou voto (`PERSISTE` ou `RESOLVIDO`). |
+| `POST` | `/api/atualizacoes/{id}/midias` | Autor Atualização | Anexa foto comprobatória à atualização comunitária. |
+
+### 🏷️ Categorias e Municípios
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/categorias` | Público | Lista as categorias ativas de zeladoria urbana. |
+| `GET` | `/api/categorias/{id}` | Público | Consulta categoria por ID. |
+| `POST` | `/api/categorias` | Admin | Cadastra nova categoria de ocorrência. |
+| `PUT` | `/api/categorias/{id}` | Admin | Atualiza categoria existente. |
+| `DELETE` | `/api/categorias/{id}` | Admin | Remove ou desativa uma categoria. |
+| `GET` | `/api/municipios` | Público | Lista municípios atendidos pela plataforma (código IBGE e UF). |
+| `GET` | `/api/municipios/{id}` | Público | Consulta município por ID. |
+
+### 📊 Relatórios e Indicadores
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/admin/relatorios/ocorrencias` | Admin | Retorna dados agregados baseados na `VW_RELATORIO_OCORRENCIAS`. |
+
+### ⚙️ Integração Direta com Oracle PL/SQL
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/ocorrencias/{id}/integracao-oracle/registrar-atualizacao` | Cidadão | Invoca `PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO`. |
+| `GET` | `/api/ocorrencias/{id}/integracao-oracle/total-votos-ativos` | Público | Invoca `PKG_COMUNIDADE.FN_TOTAL_VOTOS_ATIVOS`. |
+
+### 💓 Verificação de Saúde (Health Checks)
+| Método | Endpoint | Acesso | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/health/live` | Público | Liveness probe para orquestradores de nuvem. |
+| `GET` | `/health/db` | Público | Verifica conectividade com o Oracle Database. |
+| `GET` | `/health/external` | Público | Verifica disponibilidade da API externa ViaCEP. |
+| `GET` | `/health/ready` | Público | Readiness probe consolidada de todos os serviços. |
+
+---
+
+## 🧪 Testes Automatizados
+
+A solução conta com **60 testes automatizados** cobrindo testes unitários de regras de negócio, repositórios mockados e testes de integração com `WebApplicationFactory`:
+
+```bash
+dotnet test
+```
+
+### Resultados da Suíte de Testes:
+```text
+Passed!  - Failed: 0, Passed: 60, Skipped: 0, Total: 60, Duration: 2 s - BairroVivo.Tests.dll
+```
+
+### Principais Cenários Cobertos:
+* **Domínio:** Validação de coordenadas geográficas, regras de transição de status e consenso de 2 votos.
+* **Segurança:** Rejeição de requisições não autenticadas (`401`), bloqueio de edição por não-autores (`403`) e restrição de abertura de ocorrências por administradores (`403`).
+* **JWT RS256 e Java:** Emissão e validação de tokens assimétricos RS256 contendo claims `sub` e `roles`.
+* **Idempotência:** Validação de replay de requisições com a mesma chave e detecção de conflitos de payload (`409`).
+* **HATEOAS e Paginação:** Verificação de integridade dos links de navegação e metadados de paginação.
+
+---
+
+## 💻 Instruções de Execução Local
+
+### Pré-requisitos
+* [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+* Acesso ao banco Oracle (ou execução via InMemory para testes)
+
+### 1. Clonar o Repositório
+```bash
+git clone https://github.com/FIAP-BAIRRO-VIVO/fiap-bairro-vivo-csharp.git
+cd fiap-bairro-vivo-csharp
+```
+
+### 2. Restaurar Dependências e Compilar
+```bash
+dotnet restore
+dotnet build
+```
+
+### 3. Executar os Testes
+```bash
+dotnet test
+```
+
+### 4. Executar a Aplicação
 ```bash
 dotnet run --project BairroVivo.API
 ```
-O Swagger estará disponível na raiz (`http://localhost:5222/`).
+A API estará acessível em `http://localhost:5222` e o Swagger em `http://localhost:5222/swagger`.
 
-### Executar os Testes Automatizados (xUnit + Moq + WebApplicationFactory)
-```bash
-dotnet test BairroVivo.sln
-```
+---
+
+## 📦 Deploy em Nuvem (Render)
+
+A aplicação está configurada para deploy automatizado através do [Dockerfile](file:///home/antigravity/FIAP-BAIRRO-VIVO/fiap-bairro-vivo-csharp/Dockerfile) multi-stage na nuvem do Render:
+- **Build Stage:** `mcr.microsoft.com/dotnet/sdk:8.0` para compilação e publicação.
+- **Runtime Stage:** `mcr.microsoft.com/dotnet/aspnet:8.0` em imagem Linux otimizada.
+- **Variáveis de Ambiente Configuradas no Render:**
+  - `PORT`: Porta dinâmica gerenciada pela plataforma.
+  - `ConnectionStrings__OracleConnection`: Conexão com o banco Oracle da FIAP.
+  - `Jwt__Issuer`: `bairro-vivo-java`.
+  - `Jwt__Audience`: `bairro-vivo-apis`.
+  - `Jwt__PublicKey`: Chave pública RSA para validação dos tokens RS256.

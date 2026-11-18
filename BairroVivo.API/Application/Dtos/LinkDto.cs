@@ -1,6 +1,6 @@
 namespace BairroVivo.API.Application.Dtos;
 
-// Aula 08: cada link HATEOAS informa o recurso, sua relacao e o verbo HTTP.
+// Representação de link HATEOAS padronizado (RFC 8288 / RESTful API)
 public class LinkDto
 {
     public string Href { get; set; } = string.Empty;
