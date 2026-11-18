@@ -13,8 +13,6 @@ namespace BairroVivo.API.Presentation.Controllers;
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(StatusCodes.Status403Forbidden)]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-[Route("api/v1/ocorrencias/minhas")]
-[Route("api/v1/ocorrencias/me")]
 [Route("api/ocorrencias/minhas")]
 [Route("api/ocorrencias/me")]
 public class MinhasOcorrenciasController : ControllerBase
@@ -45,7 +43,7 @@ public class MinhasOcorrenciasController : ControllerBase
             return Unauthorized(new { mensagem = "Token JWT sem identificador de cidadão válido." });
 
         var resultado = _ocorrencias.ObterPorUsuarioPaginado(id.Value, pagina, tamanho, status, ordem);
-        var caminho = "/api/v1/ocorrencias/minhas";
+        var caminho = "/api/ocorrencias/minhas";
         var query = $"&status={Uri.EscapeDataString(status ?? "")}&ordem={Uri.EscapeDataString(ordem ?? "recentes")}";
 
         var itens = resultado.Items.Select(o => new OcorrenciaItemDto

@@ -16,7 +16,6 @@ namespace BairroVivo.Presentation.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Route("api/v1")]
     [Route("api")]
     public class OcorrenciasController : ControllerBase
     {
@@ -62,7 +61,7 @@ namespace BairroVivo.Presentation.Controllers
             var resultado = _ocorrenciaUseCase.ObterPaginado(
                 p, s, minLat, maxLat, minLon, maxLon, cat, mun, status, ordem);
 
-            var caminho = "/api/v1/ocorrencias";
+            var caminho = "/api/ocorrencias";
             var query = $"&status={Uri.EscapeDataString(status ?? "")}&ordem={Uri.EscapeDataString(ordem ?? "recentes")}";
 
             var itens = resultado.Items.Select(o => new OcorrenciaItemDto

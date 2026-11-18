@@ -11,7 +11,6 @@ namespace BairroVivo.Presentation.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Route("api/v1/municipios")]
     [Route("api/municipios")]
     public class MunicipiosController : ControllerBase
     {

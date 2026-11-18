@@ -12,7 +12,6 @@ namespace BairroVivo.Presentation.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Route("api/v1/categorias")]
     [Route("api/categorias")]
     public class CategoriasController : ControllerBase
     {

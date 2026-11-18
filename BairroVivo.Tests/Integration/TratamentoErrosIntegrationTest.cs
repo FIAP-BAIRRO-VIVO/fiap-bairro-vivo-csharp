@@ -64,7 +64,7 @@ public class TratamentoErrosIntegrationTest
         };
 
         // Act
-        var resposta = await client.PostAsJsonAsync("/api/v1/ocorrencias", dados);
+        var resposta = await client.PostAsJsonAsync("/api/ocorrencias", dados);
         var corpo = await resposta.Content.ReadAsStringAsync();
 
         // Assert
@@ -90,7 +90,7 @@ public class TratamentoErrosIntegrationTest
         };
 
         // Act
-        var resposta = await client.PostAsJsonAsync("/api/v1/ocorrencias", dados);
+        var resposta = await client.PostAsJsonAsync("/api/ocorrencias", dados);
         var corpo = await resposta.Content.ReadAsStringAsync();
 
         // Assert
@@ -105,7 +105,7 @@ public class TratamentoErrosIntegrationTest
         var client = _factory.CreateClient();
 
         // Act
-        var resposta = await client.GetAsync("/api/v1/ocorrencias/999999");
+        var resposta = await client.GetAsync("/api/ocorrencias/999999");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, resposta.StatusCode);
@@ -118,7 +118,7 @@ public class TratamentoErrosIntegrationTest
         var client = _factory.CreateClient();
 
         // Act
-        var resposta = await client.GetAsync("/api/v1/ocorrencias/minhas");
+        var resposta = await client.GetAsync("/api/ocorrencias/minhas");
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
@@ -133,7 +133,7 @@ public class TratamentoErrosIntegrationTest
             "Bearer", BairroVivoApiFactory.CriarToken(1, "CIDADAO"));
 
         // Act
-        var resposta = await client.GetAsync("/api/v1/admin/relatorios/ocorrencias");
+        var resposta = await client.GetAsync("/api/admin/relatorios/ocorrencias");
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, resposta.StatusCode);
@@ -159,13 +159,13 @@ public class TratamentoErrosIntegrationTest
             enderecoReferencia = "Bela Vista"
         };
 
-        using var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ocorrencias")
+        using var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/ocorrencias")
         {
             Content = JsonContent.Create(payload)
         };
         req1.Headers.Add("Idempotency-Key", chaveIdempotencia);
 
-        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ocorrencias")
+        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/ocorrencias")
         {
             Content = JsonContent.Create(payload)
         };
@@ -216,13 +216,13 @@ public class TratamentoErrosIntegrationTest
             enderecoReferencia = "Rua B"
         };
 
-        using var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ocorrencias")
+        using var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/ocorrencias")
         {
             Content = JsonContent.Create(payload1)
         };
         req1.Headers.Add("Idempotency-Key", chaveIdempotencia);
 
-        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ocorrencias")
+        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/ocorrencias")
         {
             Content = JsonContent.Create(payload2)
         };

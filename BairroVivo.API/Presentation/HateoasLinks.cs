@@ -6,13 +6,13 @@ public static class HateoasLinks
 {
     public static List<LinkDto> ParaOcorrencia(long idOcorrencia) => new()
     {
-        new($"/api/v1/ocorrencias/{idOcorrencia}", "self", "GET"),
-        new($"/api/v1/ocorrencias/{idOcorrencia}", "update", "PUT"),
-        new($"/api/v1/ocorrencias/{idOcorrencia}", "delete", "DELETE"),
-        new($"/api/v1/ocorrencias/{idOcorrencia}/atualizacoes", "atualizacoes", "GET"),
-        new($"/api/v1/ocorrencias/{idOcorrencia}/atualizacoes", "atualizar_ou_votar", "POST"),
-        new($"/api/v1/ocorrencias/{idOcorrencia}/historico", "historico", "GET"),
-        new($"/api/v1/ocorrencias/{idOcorrencia}/midias", "adicionar_midia", "POST")
+        new($"/api/ocorrencias/{idOcorrencia}", "self", "GET"),
+        new($"/api/ocorrencias/{idOcorrencia}", "update", "PUT"),
+        new($"/api/ocorrencias/{idOcorrencia}", "delete", "DELETE"),
+        new($"/api/ocorrencias/{idOcorrencia}/atualizacoes", "atualizacoes", "GET"),
+        new($"/api/ocorrencias/{idOcorrencia}/atualizacoes", "atualizar_ou_votar", "POST"),
+        new($"/api/ocorrencias/{idOcorrencia}/historico", "historico", "GET"),
+        new($"/api/ocorrencias/{idOcorrencia}/midias", "adicionar_midia", "POST")
     };
 
     public static List<LinkDto> ParaRegistro(
@@ -20,12 +20,12 @@ public static class HateoasLinks
     {
         var links = new List<LinkDto>
         {
-            new($"/api/v1/{recurso}/{idRegistro}", "self", "GET"),
-            new($"/api/v1/ocorrencias/{idOcorrencia}", "ocorrencia", "GET"),
-            new($"/api/v1/ocorrencias/{idOcorrencia}/{recurso}", "collection", "GET")
+            new($"/api/{recurso}/{idRegistro}", "self", "GET"),
+            new($"/api/ocorrencias/{idOcorrencia}", "ocorrencia", "GET"),
+            new($"/api/ocorrencias/{idOcorrencia}/{recurso}", "collection", "GET")
         };
         if (permiteExclusao)
-            links.Add(new($"/api/v1/{recurso}/{idRegistro}", "delete", "DELETE"));
+            links.Add(new($"/api/{recurso}/{idRegistro}", "delete", "DELETE"));
         return links;
     }
 

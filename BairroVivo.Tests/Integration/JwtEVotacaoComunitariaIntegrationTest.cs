@@ -27,7 +27,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
     public async Task EndpointProtegido_SemToken_Retorna401()
     {
         var client = _factory.CreateClient();
-        var resposta = await client.GetAsync("/api/v1/ocorrencias/minhas");
+        var resposta = await client.GetAsync("/api/ocorrencias/minhas");
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
 
@@ -38,7 +38,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
         var client = ClienteAutenticado(2, "CIDADAO");
 
         var resposta = await client.PutAsJsonAsync(
-            "/api/v1/ocorrencias/1",
+            "/api/ocorrencias/1",
             new
             {
                 categoriaId = 1,
@@ -57,7 +57,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
         var client = ClienteAutenticado(3, "ADMIN");
 
         var resposta = await client.PostAsJsonAsync(
-            "/api/v1/ocorrencias",
+            "/api/ocorrencias",
             new
             {
                 categoriaId = 1,
@@ -73,7 +73,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
     public async Task AdminConsultaRelatorios_Retorna200()
     {
         var client = ClienteAutenticado(3, "ADMIN");
-        var resposta = await client.GetAsync("/api/v1/admin/relatorios/ocorrencias");
+        var resposta = await client.GetAsync("/api/admin/relatorios/ocorrencias");
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
     }
 
@@ -81,7 +81,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
     public async Task AnonimatoPublico_OcorrenciaComFlAnonimoS_MascaraAutorComoCidadaoAnonimo()
     {
         var client = _factory.CreateClient();
-        var resposta = await client.GetAsync("/api/v1/ocorrencias/2");
+        var resposta = await client.GetAsync("/api/ocorrencias/2");
 
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
         using var doc = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync());
@@ -93,7 +93,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
     {
         // Criar uma nova ocorrência com o Cidadão 1 para testar o ciclo completo de votos
         var autor = ClienteAutenticado(1, "CIDADAO");
-        var novaOcResp = await autor.PostAsJsonAsync("/api/v1/ocorrencias", new
+        var novaOcResp = await autor.PostAsJsonAsync("/api/ocorrencias", new
         {
             categoriaId = 1,
             municipioId = 1,
@@ -110,7 +110,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
 
         // Voto 1: Cidadão 1 vota RESOLVIDO
         var cidadao1 = ClienteAutenticado(1, "CIDADAO");
-        var voto1 = await cidadao1.PostAsJsonAsync($"/api/v1/ocorrencias/{idNova}/atualizacoes", new
+        var voto1 = await cidadao1.PostAsJsonAsync($"/api/ocorrencias/{idNova}/atualizacoes", new
         {
             tipo = "RESOLVIDO",
             texto = "A equipe da CET acabou de arrumar o semáforo."
@@ -118,7 +118,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
         Assert.Equal(HttpStatusCode.Created, voto1.StatusCode);
 
         // Tentativa de voto duplicado no mesmo ciclo pelo Cidadão 1 -> 409 Conflict
-        var votoDuplicado = await cidadao1.PostAsJsonAsync($"/api/v1/ocorrencias/{idNova}/atualizacoes", new
+        var votoDuplicado = await cidadao1.PostAsJsonAsync($"/api/ocorrencias/{idNova}/atualizacoes", new
         {
             tipo = "RESOLVIDO",
             texto = "Confirmando novamente que o semáforo foi arrumado."
@@ -127,7 +127,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
 
         // Voto 2: Cidadão 2 vota RESOLVIDO -> atinge os 2 votos necessários e transiciona para RESOLVIDA no ciclo 2
         var cidadao2 = ClienteAutenticado(2, "CIDADAO");
-        var voto2 = await cidadao2.PostAsJsonAsync($"/api/v1/ocorrencias/{idNova}/atualizacoes", new
+        var voto2 = await cidadao2.PostAsJsonAsync($"/api/ocorrencias/{idNova}/atualizacoes", new
         {
             tipo = "RESOLVIDO",
             texto = "Também passei por lá e o trânsito está fluindo normalmente."
@@ -135,7 +135,7 @@ public class JwtEVotacaoComunitariaIntegrationTest
         Assert.Equal(HttpStatusCode.Created, voto2.StatusCode);
 
         // Verifica estado atualizado da ocorrência
-        var consulta = await _factory.CreateClient().GetAsync($"/api/v1/ocorrencias/{idNova}");
+        var consulta = await _factory.CreateClient().GetAsync($"/api/ocorrencias/{idNova}");
         using var consultaDoc = JsonDocument.Parse(await consulta.Content.ReadAsStringAsync());
 
         Assert.Equal("RESOLVIDA", consultaDoc.RootElement.GetProperty("status").GetString());

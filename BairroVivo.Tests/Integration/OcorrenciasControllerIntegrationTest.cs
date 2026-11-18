@@ -23,7 +23,7 @@ namespace BairroVivo.Tests.Integration
         public async Task ObterPorId_OcorrenciaExistente_Retorna200()
         {
             // Act
-            var response = await _client.GetAsync("/api/v1/ocorrencias/1");
+            var response = await _client.GetAsync("/api/ocorrencias/1");
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -39,7 +39,7 @@ namespace BairroVivo.Tests.Integration
         [Trait("Integration", "Ocorrencias")]
         public async Task ObterPorId_OcorrenciaInexistente_Retorna404()
         {
-            var response = await _client.GetAsync("/api/v1/ocorrencias/999999");
+            var response = await _client.GetAsync("/api/ocorrencias/999999");
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
@@ -60,8 +60,8 @@ namespace BairroVivo.Tests.Integration
             };
 
             // Act: Autor (idUsuario 1) atualiza sua ocorrência 1
-            var putResponse = await _client.PutAsJsonAsync("/api/v1/ocorrencias/1", request);
-            var getResponse = await _client.GetAsync("/api/v1/ocorrencias/1");
+            var putResponse = await _client.PutAsJsonAsync("/api/ocorrencias/1", request);
+            var getResponse = await _client.GetAsync("/api/ocorrencias/1");
 
             // Assert
             Assert.Equal(HttpStatusCode.NoContent, putResponse.StatusCode);
@@ -78,7 +78,7 @@ namespace BairroVivo.Tests.Integration
         public async Task ListarComFiltroBoundingBox_RetornaApenasAreaVisivel()
         {
             // Arrange: filtro que abrange São Paulo (-23.56, -46.65)
-            var url = "/api/v1/ocorrencias?minLat=-24&maxLat=-23&minLon=-47&maxLon=-46";
+            var url = "/api/ocorrencias?minLat=-24&maxLat=-23&minLon=-47&maxLon=-46";
 
             // Act
             var response = await _client.GetAsync(url);

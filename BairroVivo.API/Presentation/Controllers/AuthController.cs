@@ -10,7 +10,6 @@ namespace BairroVivo.API.Presentation.Controllers;
 
 [ApiController]
 [AllowAnonymous]
-[Route("api/v1/auth")]
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {

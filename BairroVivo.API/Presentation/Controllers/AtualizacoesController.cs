@@ -15,7 +15,6 @@ namespace BairroVivo.Presentation.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Route("api/v1")]
     [Route("api")]
     public class AtualizacoesController : ControllerBase
     {
@@ -52,7 +51,7 @@ namespace BairroVivo.Presentation.Controllers
                     item.Links = HateoasLinks.ParaRegistro("atualizacoes", item.IdAtualizacao, ocorrenciaId);
                 }
 
-                var caminho = $"/api/v1/ocorrencias/{ocorrenciaId}/atualizacoes";
+                var caminho = $"/api/ocorrencias/{ocorrenciaId}/atualizacoes";
                 resultado.Items = itens;
                 resultado.Links = HateoasLinks.ParaPagina(caminho, resultado.Pagina, resultado.Tamanho, resultado.Total);
 

@@ -24,7 +24,6 @@ public class IntegracaoOracleController : ControllerBase
     }
 
     // Executa a procedure PL/SQL PKG_COMUNIDADE.PR_REGISTRAR_ATUALIZACAO no lado Oracle.
-    [HttpPost("api/v1/ocorrencias/{ocorrenciaId:long}/integracao-oracle/registrar-atualizacao")]
     [HttpPost("api/ocorrencias/{ocorrenciaId:long}/integracao-oracle/registrar-atualizacao")]
     public async Task<IActionResult> ExecutarProcedureAtualizacao(
         long ocorrenciaId,
@@ -46,7 +45,6 @@ public class IntegracaoOracleController : ControllerBase
     }
 
     // Invoca a function PL/SQL PKG_COMUNIDADE.FN_TOTAL_VOTOS_ATIVOS no lado Oracle.
-    [HttpGet("api/v1/ocorrencias/{ocorrenciaId:long}/integracao-oracle/total-votos-ativos")]
     [HttpGet("api/ocorrencias/{ocorrenciaId:long}/integracao-oracle/total-votos-ativos")]
     [AllowAnonymous]
     public async Task<IActionResult> ObterTotalVotosAtivos(
