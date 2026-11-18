@@ -10,7 +10,7 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
         [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
-        [JsonPropertyName("idOcorrencia")]
+        [JsonIgnore]
         public long IdOcorrencia
         {
             get => long.TryParse(Id, out var val) ? val : 0;
@@ -32,14 +32,8 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
         [JsonPropertyName("categoria")]
         public CategoriaResponseDto Categoria { get; set; } = new();
 
-        [JsonPropertyName("idCategoria")]
-        public long IdCategoria => Categoria.IdCategoria;
-
         [JsonPropertyName("municipio")]
         public MunicipioResponseDto Municipio { get; set; } = new();
-
-        [JsonPropertyName("idMunicipio")]
-        public long IdMunicipio => Municipio.IdMunicipio;
 
         [JsonPropertyName("uf")]
         public string Uf => Municipio.Uf;

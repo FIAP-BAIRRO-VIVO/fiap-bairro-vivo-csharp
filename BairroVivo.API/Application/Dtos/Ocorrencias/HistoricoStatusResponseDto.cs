@@ -7,7 +7,7 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
         [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
-        [JsonPropertyName("idHistorico")]
+        [JsonIgnore]
         public long IdHistorico
         {
             get => long.TryParse(Id, out var val) ? val : 0;

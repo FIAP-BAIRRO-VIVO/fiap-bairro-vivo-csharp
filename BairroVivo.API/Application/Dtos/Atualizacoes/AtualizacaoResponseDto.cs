@@ -9,7 +9,7 @@ namespace BairroVivo.Application.Dtos.Atualizacoes
         [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
-        [JsonPropertyName("idAtualizacao")]
+        [JsonIgnore]
         public long IdAtualizacao
         {
             get => long.TryParse(Id, out var val) ? val : 0;

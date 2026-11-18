@@ -44,7 +44,7 @@ public class HateoasPaginacaoHealthTest
         var client = _factory.CreateClient();
 
         // Act
-        var resposta = await client.GetAsync("/api/ocorrencias?pagina=1&tamanho=10&idMunicipio=1&minLat=-24&maxLat=-23&minLon=-47&maxLon=-46");
+        var resposta = await client.GetAsync("/api/ocorrencias?pagina=1&tamanho=10&municipioId=1&minLat=-24&maxLat=-23&minLon=-47&maxLon=-46");
         var json = await resposta.Content.ReadAsStringAsync();
 
         // Assert

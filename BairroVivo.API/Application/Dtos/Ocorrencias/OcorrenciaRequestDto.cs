@@ -5,25 +5,15 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
 {
     public class OcorrenciaRequestDto
     {
+        [Required(ErrorMessage = "O identificador da categoria é obrigatório.")]
+        [Range(1, long.MaxValue, ErrorMessage = "Categoria inválida.")]
         [JsonPropertyName("categoriaId")]
         public long CategoriaId { get; set; }
 
-        [JsonPropertyName("idCategoria")]
-        public long IdCategoria
-        {
-            get => CategoriaId;
-            set => CategoriaId = value;
-        }
-
+        [Required(ErrorMessage = "O identificador do município é obrigatório.")]
+        [Range(1, long.MaxValue, ErrorMessage = "Município inválido.")]
         [JsonPropertyName("municipioId")]
         public long MunicipioId { get; set; }
-
-        [JsonPropertyName("idMunicipio")]
-        public long IdMunicipio
-        {
-            get => MunicipioId;
-            set => MunicipioId = value;
-        }
 
         [Required(ErrorMessage = "O título da ocorrência é obrigatório.")]
         [MinLength(5, ErrorMessage = "O título deve ter no mínimo 5 caracteres.")]

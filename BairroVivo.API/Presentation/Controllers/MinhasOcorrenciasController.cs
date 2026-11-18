@@ -14,7 +14,6 @@ namespace BairroVivo.API.Presentation.Controllers;
 [ProducesResponseType(StatusCodes.Status403Forbidden)]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
 [Route("api/ocorrencias/minhas")]
-[Route("api/ocorrencias/me")]
 public class MinhasOcorrenciasController : ControllerBase
 {
     private readonly IOcorrenciaAccessService _acesso;

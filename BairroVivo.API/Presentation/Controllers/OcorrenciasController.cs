@@ -40,26 +40,17 @@ namespace BairroVivo.Presentation.Controllers
         public IActionResult ObterPaginado(
             [FromQuery] int pagina = 1,
             [FromQuery] int tamanho = 10,
-            [FromQuery] int? page = null,
-            [FromQuery] int? pageSize = null,
             [FromQuery] decimal? minLat = null,
             [FromQuery] decimal? maxLat = null,
             [FromQuery] decimal? minLon = null,
             [FromQuery] decimal? maxLon = null,
             [FromQuery] long? categoriaId = null,
-            [FromQuery] long? idCategoria = null,
             [FromQuery] long? municipioId = null,
-            [FromQuery] long? idMunicipio = null,
             [FromQuery] string? status = null,
             [FromQuery] string? ordem = "recentes")
         {
-            var p = page ?? pagina;
-            var s = pageSize ?? tamanho;
-            var cat = categoriaId ?? idCategoria;
-            var mun = municipioId ?? idMunicipio;
-
             var resultado = _ocorrenciaUseCase.ObterPaginado(
-                p, s, minLat, maxLat, minLon, maxLon, cat, mun, status, ordem);
+                pagina, tamanho, minLat, maxLat, minLon, maxLon, categoriaId, municipioId, status, ordem);
 
             var caminho = "/api/ocorrencias";
             var query = $"&status={Uri.EscapeDataString(status ?? "")}&ordem={Uri.EscapeDataString(ordem ?? "recentes")}";

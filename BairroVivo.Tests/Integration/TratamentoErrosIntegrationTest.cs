@@ -54,8 +54,8 @@ public class TratamentoErrosIntegrationTest
             "Bearer", BairroVivoApiFactory.CriarToken(1, "CIDADAO"));
         var dados = new
         {
-            idCategoria = 999999L,
-            idMunicipio = 1L,
+            categoriaId = 999999L,
+            municipioId = 1L,
             titulo = "Buraco na rua",
             descricao = "Descrição válida com mais de dez caracteres.",
             latitude = -23.55m,
@@ -81,8 +81,8 @@ public class TratamentoErrosIntegrationTest
             "Bearer", BairroVivoApiFactory.CriarToken(1, "CIDADAO"));
         var dados = new
         {
-            idCategoria = 1L,
-            idMunicipio = 1L,
+            categoriaId = 1L,
+            municipioId = 1L,
             titulo = "No", // menos de 5 caracteres
             descricao = "Curto", // menos de 10 caracteres
             latitude = -23.55m,
@@ -150,8 +150,8 @@ public class TratamentoErrosIntegrationTest
         var chaveIdempotencia = $"idem-test-{Guid.NewGuid()}";
         var payload = new
         {
-            idCategoria = 1L,
-            idMunicipio = 1L,
+            categoriaId = 1L,
+            municipioId = 1L,
             titulo = "Entulho descartado na calçada",
             descricao = "Grande quantidade de entulho bloqueando a passagem de pedestres.",
             latitude = -23.5620m,
@@ -196,8 +196,8 @@ public class TratamentoErrosIntegrationTest
         var chaveIdempotencia = $"idem-conflict-{Guid.NewGuid()}";
         var payload1 = new
         {
-            idCategoria = 1L,
-            idMunicipio = 1L,
+            categoriaId = 1L,
+            municipioId = 1L,
             titulo = "Primeiro envio da ocorrencia",
             descricao = "Descricao inicial detalhada com mais de dez caracteres.",
             latitude = -23.5620m,
@@ -207,8 +207,8 @@ public class TratamentoErrosIntegrationTest
 
         var payload2 = new
         {
-            idCategoria = 1L,
-            idMunicipio = 1L,
+            categoriaId = 1L,
+            municipioId = 1L,
             titulo = "Segundo envio alterado",
             descricao = "Descricao divergente enviada com a mesma chave de idempotencia.",
             latitude = -23.5620m,

@@ -21,7 +21,7 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
         public long TamanhoBytes { get; set; } = 1024;
 
         // Propriedades retrocompatíveis
-        [JsonPropertyName("urlMidia")]
+        [JsonIgnore]
         public string? UrlMidia
         {
             get => UrlExibicao ?? ChaveStorage;

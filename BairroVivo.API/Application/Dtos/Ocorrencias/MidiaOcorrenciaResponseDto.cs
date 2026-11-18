@@ -7,7 +7,7 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
         [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
-        [JsonPropertyName("idMidia")]
+        [JsonIgnore]
         public long IdMidia
         {
             get => long.TryParse(Id, out var val) ? val : 0;
@@ -29,7 +29,7 @@ namespace BairroVivo.Application.Dtos.Ocorrencias
         [JsonPropertyName("urlExibicao")]
         public string? UrlExibicao { get; set; }
 
-        [JsonPropertyName("urlMidia")]
+        [JsonIgnore]
         public string? UrlMidia => UrlExibicao ?? ChaveStorage;
 
         [JsonPropertyName("mimeType")]
