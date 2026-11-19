@@ -210,5 +210,68 @@ public class JwtEVotacaoComunitariaIntegrationTest
         var response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task TokenAssinadoComChavePrivadaRealDoJava_ValidaComSucesso()
+    {
+        var client = _factory.CreateClient();
+
+        var chavePrivadaPem = @"-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5SCpGFlAtIZbE
+3QDDRsIpqF8CNnoLQFp6T07c0lhcjGIiY3Ek4zgTBuvPgv5SOtZ0t4XzVdNwUxRW
+E6YljpZ+tqeUY35Ow8mj+l7Stq9Gq/x31AT/G5eVUj8Jb2KSAolx7vrBf/XeAVgv
+YnR80TltPCoQ202hbDN+jwHKqH1TdIYtcSppj2FcX0/iHffNJRljhs6+1dTiqffl
+IGG5L21Yrln6ldciR/snU0Akzn0zt8v/jnJYREug8GA+gUrndkZ5eA6rJN4tuDbu
+261V3+2GdfP0DR8MxaTgq/Op0QR6Rfj4ALbbG+5m3BbkjpW2sbBR94NHJADMWW1e
+kkQxsca3AgMBAAECggEABaoGnNDmz5JkzQzijpW1rtdWXDd1IK3tdirBgu+tQtsJ
+zvpSRanql25RPC1JgBMLZlML9cXsalUn3H/KRwCmaiZEVj16aYcDvY8UYgWyswrj
+83fYVUIvLqHuimfM0CDiuchwAwVZ61kILJ6qZ/xvcH7z3EMQCvzHUDmn+N2Qw0HR
+1VGobp2EN68twgBNGkW7VrgSplI7xvGK5R0fDoMFtBXsrYrZ+aq7qI70dApKUN/J
+UHcr9BkNzThdrnZLG/ryeYHynsni46/r/nj3zzcc01KQIRx5JGzuN7tqX6MbI9eQ
+a2tnPoEmhjb+SxDnujisAwG9S2H4aoTJy8ThaABEdQKBgQDLVOy4xBuE0pigDdY5
+XhKw//mKH4XIjvXa3c/Gt5rS0/GP1/T27SI26Wjjx+BnxcvfUDvk1TKr3kICFbwG
+7KTwodptHtZgnrQs/C+li8qhuwWVjgwhGoD2oN7wxkRt7ZA5R9sqlzc0ODw6CAHo
+BonEhdp5EiNBEB01rkEDn+0bUwKBgQDpRlegUEvTL1LdbCKMNVaP8SOtefP5Apau
+e2XLappDGwzOzadDKwbNmJ9KaTq0PAMHKpCI4KoCn9c0dlWEFqpu5Gc+8DoWXq0x
+D55CKOc6O9UgZ5aFmAyBL/CFBbth+e7Ee1Vxcaaf0EJkriQvC6gdamVzWfXZjCpJ
+47mPKsIejQKBgHGIFLlB/p+WO1Q7BZ94kHU2KC5gVYHbmRlA+s/ZGuCXKO0JRyVM
+2OrSPxfYNcubnK8vDJJEHIvsiOzDF/7ByYL2zJBbRJYkZzQrB6umt1jApWiRLOKa
++uE6h+Dmw7ShjgL9xTktv8wvjilU6UOVyvzpREiPwRGGHtknV/PfKzQzAoGAfCcz
++97AfGVzdOVYfcblizaMBoghkSYPjE2gn+Lct1puNqK9osIDnOjd3nyjAcnu0qGU
+y0THNx5bK1DPsr1deCeXy6ePQtig1Lu7PvsGFbhCdjyrn+6MuTUKjcG/OSYMLgZ2
+MyqJxATTUUJdf6x0jTNTS1FVx7MRzsGkwM3BAwECgYEAmfLDdSIMetvPAB3L1paG
+reNAO9tcNn16yEAShT1mRbglgxwoOxQ0pYCg23CgptDLjSOQC76Wk9awhmMxVLiv
+y/OJH43cFYnHDYCFr35oEQwSAkDR03H+ogqafvL1AsK1zPzzHObrTvoMdhKGRuB1
+/XGP9wa1b577YRpM4Vt9SeM=
+-----END PRIVATE KEY-----";
+
+        using var rsaPrivada = System.Security.Cryptography.RSA.Create();
+        rsaPrivada.ImportFromPem(chavePrivadaPem.Trim());
+
+        var credenciais = new SigningCredentials(
+            new RsaSecurityKey(rsaPrivada),
+            SecurityAlgorithms.RsaSha256);
+
+        var claims = new List<Claim>
+        {
+            new("sub", "1"),
+            new("roles", "CIDADAO")
+        };
+
+        var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            issuer: "bairro-vivo-java",
+            audience: "bairro-vivo-apis",
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(2),
+            signingCredentials: credenciais);
+
+        var tokenString = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/ocorrencias/minhas");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenString);
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }
 

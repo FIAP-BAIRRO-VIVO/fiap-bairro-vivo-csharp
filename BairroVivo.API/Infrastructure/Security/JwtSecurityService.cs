@@ -31,9 +31,22 @@ public class JwtSecurityService : IJwtSecurityService
         var chavePublicaPem = _configuration["Jwt:PublicKey"];
         var caminhoChavePublica = _configuration["Jwt:PublicKeyPath"] ?? "public_key.pem";
 
-        if (string.IsNullOrWhiteSpace(chavePublicaPem) && File.Exists(caminhoChavePublica))
+        if (string.IsNullOrWhiteSpace(chavePublicaPem))
         {
-            chavePublicaPem = File.ReadAllText(caminhoChavePublica);
+            var caminhos = new[]
+            {
+                caminhoChavePublica,
+                Path.Combine(AppContext.BaseDirectory, caminhoChavePublica),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "BairroVivo.API", caminhoChavePublica)
+            };
+            foreach (var path in caminhos)
+            {
+                if (File.Exists(path))
+                {
+                    chavePublicaPem = File.ReadAllText(path);
+                    break;
+                }
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(chavePublicaPem))
@@ -41,8 +54,8 @@ public class JwtSecurityService : IJwtSecurityService
             try
             {
                 var rsaJava = RSA.Create();
-                rsaJava.ImportFromPem(chavePublicaPem.Trim());
-                chaves.Add(new RsaSecurityKey(rsaJava) { KeyId = "java-rs256-key" });
+                rsaJava.ImportFromPem(chavePublicaPem.Replace("\\n", "\n").Trim());
+                chaves.Add(new RsaSecurityKey(rsaJava));
             }
             catch (Exception ex)
             {
@@ -51,7 +64,7 @@ public class JwtSecurityService : IJwtSecurityService
         }
 
         // 2. Chave Publica RSA para testes e Swagger (RS256)
-        chaves.Add(new RsaSecurityKey(RsaDev) { KeyId = "dev-rs256-key" });
+        chaves.Add(new RsaSecurityKey(RsaDev));
 
         // 3. Chave Simetrica de fallback para retrocompatibilidade e testes de integracao XUnit (HS256)
         var secret = _environment.IsEnvironment("Testing")
@@ -68,7 +81,22 @@ public class JwtSecurityService : IJwtSecurityService
 
     public SigningCredentials ObterCredenciaisAssinaturaDev()
     {
-        // Emite token RS256 (padrao oficial do contrato da integracao com Java)
+        var chavePrivada = _configuration["Jwt:PrivateKey"];
+        if (!string.IsNullOrWhiteSpace(chavePrivada))
+        {
+            try
+            {
+                var rsa = RSA.Create();
+                rsa.ImportFromPem(chavePrivada.Replace("\\n", "\n").Trim());
+                return new SigningCredentials(new RsaSecurityKey(rsa), SecurityAlgorithms.RsaSha256);
+            }
+            catch
+            {
+                // Fallback para RsaDev
+            }
+        }
+
+        // Emite token RS256 com chave de desenvolvimento
         return new SigningCredentials(new RsaSecurityKey(RsaDev), SecurityAlgorithms.RsaSha256);
     }
 }
